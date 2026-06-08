@@ -4,3 +4,7 @@ version: '${version}'
 main: me.cobbleBet.Main
 api-version: '1.21'
 load: POSTWORLD
+
+commands:
+  gamble:
+  wallet:
