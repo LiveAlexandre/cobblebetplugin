@@ -8,7 +8,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,9 +23,9 @@ public class PlayerWalletStorage {
         }
     }
 
-    // -------------------------
-    // LOAD ALL (onEnable)
-    // -------------------------
+    // =========================
+    // LOAD ALL
+    // =========================
     public void loadAll() {
 
         File[] files = folder.listFiles();
@@ -48,31 +47,39 @@ public class PlayerWalletStorage {
 
             PlayerWallet wallet = new PlayerWallet(uuid);
 
+            // =========================
+            // LOAD VAULT BALANCE
+            // =========================
+            if (config.contains("vault")) {
+                wallet.setVaultRaw(config.getDouble("vault"));
+            }
 
-            HashMap<Material, Integer> items = new HashMap<>();
-
+            // =========================
+            // LOAD ITEM BALANCES
+            // =========================
             if (config.contains("items")) {
+
                 for (String key : config.getConfigurationSection("items").getKeys(false)) {
-                    Material mat = Material.valueOf(key);
-                    int amount = config.getInt("items." + key);
-                    items.put(mat, amount);
+
+                    try {
+                        Material mat = Material.valueOf(key.toUpperCase());
+                        double amount = config.getDouble("items." + key);
+
+                        wallet.setItemBalance(mat, amount);
+
+                    } catch (IllegalArgumentException ignored) {
+                        // skip invalid materials safely
+                    }
                 }
             }
-            if(config.contains("ecoCurrency")) {
-                double ecoCurrency = config.getDouble("ecoCurrency");
-                wallet.setEcoCurrency(ecoCurrency);
-
-            }
-
-            wallet.setEconomyItemInWalletMap(items);
 
             Main.playerWalletHashMap.put(uuid, wallet);
         }
     }
 
-    // -------------------------
-    // SAVE ALL (onDisable)
-    // -------------------------
+    // =========================
+    // SAVE ALL
+    // =========================
     public void saveAll() {
 
         for (Map.Entry<UUID, PlayerWallet> entry : Main.playerWalletHashMap.entrySet()) {
@@ -80,20 +87,29 @@ public class PlayerWalletStorage {
         }
     }
 
-    // -------------------------
+    // =========================
     // SAVE SINGLE
-    // -------------------------
+    // =========================
     private void save(UUID uuid, PlayerWallet wallet) {
 
         File file = new File(folder, uuid.toString() + ".yml");
         FileConfiguration config = new YamlConfiguration();
 
+        // =========================
+        // SAVE VAULT
+        // =========================
+        config.set("vault", wallet.getVaultRaw());
 
-        for (Map.Entry<Material, Integer> entry : wallet.getEconomyItemInWalletMap().entrySet()) {
+        // =========================
+        // SAVE ITEMS
+        // =========================
+        for (Map.Entry<Material, Double> entry : wallet.getItemBalances().entrySet()) {
+
+            if (entry.getValue() <= 0)
+                continue;
+
             config.set("items." + entry.getKey().name(), entry.getValue());
         }
-
-        config.set("ecoCurrency", wallet.getEcoCurrency());
 
         try {
             config.save(file);

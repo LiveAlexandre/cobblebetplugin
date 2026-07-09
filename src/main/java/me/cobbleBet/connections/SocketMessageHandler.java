@@ -6,9 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import me.cobbleBet.connections.listeners.SocketRequestBalanceListener;
-import me.cobbleBet.connections.listeners.SocketTokenResponseListener;
-import me.cobbleBet.connections.listeners.SocketUpdateBalanceListener;
+import me.cobbleBet.connections.listeners.*;
 import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
@@ -23,6 +21,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketTokenResponseListener("tokenResponse", client));
         listeners.add(new SocketRequestBalanceListener("requestBalance", client));
         listeners.add(new SocketUpdateBalanceListener("updateBalance", client));
+        listeners.add(new SocketRequestBroadcastListener("requestBroadcast", client));
     }
 
 

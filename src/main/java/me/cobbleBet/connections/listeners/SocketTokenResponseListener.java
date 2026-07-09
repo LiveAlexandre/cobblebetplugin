@@ -45,7 +45,7 @@ public class SocketTokenResponseListener extends SocketMessageListener {
     }
 
     private static @NotNull Component getLinkFromToken(String token) {
-        StringBuilder link = new StringBuilder(Main.testMode? "http://localhost:8908/login-token?token=" : "https://cobblebet.com/login-token?token=");
+        StringBuilder link = new StringBuilder(Main.testMode? "http://localhost:8908/auth/magic-login?token=" : "https://cobblebet.com/auth/magic-login?token=");
         link.append(token);
 
         Component message = Component.text(link.toString(), NamedTextColor.YELLOW)

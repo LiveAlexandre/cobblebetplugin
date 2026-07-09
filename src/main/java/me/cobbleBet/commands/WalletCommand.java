@@ -2,14 +2,17 @@ package me.cobbleBet.commands;
 
 import me.cobbleBet.Main;
 import me.cobbleBet.economy.EconomyManager;
+import me.cobbleBet.players.PlayerWallet;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class WalletCommand implements CommandExecutor, TabCompleter {
 
@@ -35,13 +38,9 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
 
             case "help" -> sendHelp(player);
-
             case "balance", "bal" -> sendBalance(player);
-
             case "withdraw" -> handleWithdraw(player, args);
-
             case "deposit" -> handleDeposit(player, args);
-
             case "set" -> handleSet(player, args);
 
             default -> player.sendMessage(error("Unknown subcommand. Use /wallet help"));
@@ -55,15 +54,56 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
     // =========================
     private void sendBalance(Player player) {
 
-        double balance = eco().getBalance(player);
-        String currency = "$";
-        if(Main.economyType.equalsIgnoreCase("item"))
-            currency = Main.economyItem.name();
+        PlayerWallet wallet = Main.getWallet(player.getUniqueId());
 
-        player.sendMessage(mm.deserialize(
-                "<gradient:#00ffcc:#0066ff><bold>Wallet</bold></gradient>\n" +
-                        "<gray>Balance:</gray> <white>" + balance + " " + currency
-        ));
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gradient:#00ffcc:#0066ff><bold>Wallet</bold></gradient>\n");
+
+        // =========================
+        // ITEM BALANCES
+        // =========================
+        for (Map.Entry<Material, Double> entry : wallet.getItemBalances().entrySet()) {
+
+            Material mat = entry.getKey();
+            double amount = entry.getValue();
+
+            if (amount <= 0) continue;
+
+            boolean isActive =
+                    Main.economyType.equalsIgnoreCase("item")
+                            && mat == Main.economyItem;
+
+            if (isActive) {
+                sb.append("<yellow>")
+                        .append(mat.name())
+                        .append(": ")
+                        .append(amount)
+                        .append("</yellow>\n");
+            } else {
+                sb.append("<gray>")
+                        .append(mat.name())
+                        .append(": ")
+                        .append(amount)
+                        .append("</gray>\n");
+            }
+        }
+
+        // =========================
+        // VAULT BALANCE
+        // =========================
+        double vault = wallet.getVaultBalance();
+
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            sb.append("<yellow>" + Main.vaultCurrencyName + ": $")
+                    .append(vault)
+                    .append("</yellow>\n");
+        } else {
+            sb.append("<gray>" + Main.vaultCurrencyName + ": $")
+                    .append(vault)
+                    .append("</gray>\n");
+        }
+
+        player.sendMessage(mm.deserialize(sb.toString()));
     }
 
     // =========================
@@ -81,12 +121,11 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
         if (!eco().withdraw(player, amount)) {
 
-            if (Main.economyType.equalsIgnoreCase("item")) {
-                player.sendMessage(error("Not enough balance or inventory is full."));
-            } else {
-                player.sendMessage(error("Not enough balance."));
-            }
-
+            player.sendMessage(error(
+                    Main.economyType.equalsIgnoreCase("item")
+                            ? "Not enough items or inventory issue."
+                            : "Not enough balance."
+            ));
             return;
         }
 
@@ -105,18 +144,20 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
         double amount = parseAmount(player, args[1]);
         if (amount <= 0) return;
+        if(eco().getBalance(player) + amount > Main.maximumBalance) {
+            player.sendMessage(error(
+                    "The server's max Wallet balance is: " + amount
+            ));
+            return;
+        }
 
         if (!eco().deposit(player, amount)) {
 
-            if (Main.economyType.equalsIgnoreCase("item")) {
-                player.sendMessage(error(
-                        "You don't have enough " +
-                                Main.economyItem.name().toLowerCase()
-                ));
-            } else {
-                player.sendMessage(error("Failed to deposit money."));
-            }
-
+            player.sendMessage(error(
+                    Main.economyType.equalsIgnoreCase("item")
+                            ? "You don't have enough items."
+                            : "Deposit failed."
+            ));
             return;
         }
 
@@ -161,8 +202,7 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
         player.sendMessage(mm.deserialize(
                 "<gradient:#00ffcc:#0066ff><bold>Wallet Help</bold></gradient>\n" +
-                        "<gray>/wallet</gray> <white>View your balance</white>\n" +
-                        "<gray>/wallet balance</gray>\n" +
+                        "<gray>/wallet</gray> View balance\n" +
                         "<gray>/wallet deposit <amount></gray>\n" +
                         "<gray>/wallet withdraw <amount></gray>\n" +
                         "<gray>/wallet set <player> <amount></gray> <red>(Admin)</red>"
@@ -213,8 +253,8 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
             List<String> names = new ArrayList<>();
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                names.add(player.getName());
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                names.add(p.getName());
             }
 
             return names;

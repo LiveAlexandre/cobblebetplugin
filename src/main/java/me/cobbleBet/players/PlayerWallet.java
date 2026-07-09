@@ -1,11 +1,9 @@
 package me.cobbleBet.players;
 
 import me.cobbleBet.Main;
-import me.cobbleBet.storage.PlayerWalletStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -14,80 +12,146 @@ public class PlayerWallet {
 
     private final UUID playerUUID;
 
-    private HashMap<Material, Integer> economyItemInWalletMap = new HashMap<>();
-    private double currency;
+    // ==================================
+    // VAULT BALANCE (economy plugin money)
+    // ==================================
+    private double vaultBalance = 0.0;
 
+    // ==================================
+    // ITEM BALANCES (material-based economy)
+    // ==================================
+    private final HashMap<Material, Double> itemBalances = new HashMap<>();
 
     public PlayerWallet(UUID uuid) {
-        this.playerUUID=uuid;
+        this.playerUUID = uuid;
     }
+
+    // ==================================
+    // GET BALANCE
+    // ==================================
 
     public double getBalance() {
 
-        if(Main.economyType.equalsIgnoreCase("vault")) {
-            return currency;
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            return vaultBalance;
         }
 
-        if(Main.economyType.equalsIgnoreCase("item")) {
-            return economyItemInWalletMap.getOrDefault(Main.economyItem, 0);
-        }
-
-        return 0;
+        return itemBalances.getOrDefault(Main.economyItem, 0.0);
     }
 
-
-
-    public void addCurrency(double amount) {
-
-        if(Main.economyType.equalsIgnoreCase("vault")) {
-            currency += amount;
-            return;
-        }
-
-        economyItemInWalletMap.merge(
-                Main.economyItem,
-                (int) amount,
-                Integer::sum
-        );
+    public double getVaultBalance() {
+        return vaultBalance;
     }
+
+    public double getItemBalance(Material material) {
+        return itemBalances.getOrDefault(material, 0.0);
+    }
+
+    // ==================================
+    // SET BALANCE
+    // ==================================
 
     public void setCurrency(double amount) {
 
-    }
-
-    public void removeCurrency(double amount) {
-
-        if(Main.economyType.equalsIgnoreCase("vault")) {
-            currency = Math.max(0, currency - amount);
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            vaultBalance = Math.max(0, amount);
             return;
         }
 
-        int current = economyItemInWalletMap.getOrDefault(Main.economyItem, 0);
+        itemBalances.put(Main.economyItem, Math.max(0, amount));
+    }
 
-        economyItemInWalletMap.put(
+    public void setVaultBalance(double amount) {
+        vaultBalance = Math.max(0, amount);
+    }
+
+    public void setItemBalance(Material material, double amount) {
+        itemBalances.put(material, Math.max(0, amount));
+    }
+
+    // ==================================
+    // ADD
+    // ==================================
+
+    public void addCurrency(double amount) {
+
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            vaultBalance += amount;
+            return;
+        }
+
+        itemBalances.put(
                 Main.economyItem,
-                Math.max(0, current - (int) amount)
+                getBalance() + amount
         );
     }
+
+    public void addVault(double amount) {
+        vaultBalance += amount;
+    }
+
+    public void addItem(Material material, double amount) {
+        itemBalances.put(material, getItemBalance(material) + amount);
+    }
+
+    // ==================================
+    // REMOVE
+    // ==================================
+
+    public void removeCurrency(double amount) {
+
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            vaultBalance = Math.max(0, vaultBalance - amount);
+            return;
+        }
+
+        itemBalances.put(
+                Main.economyItem,
+                Math.max(0, getBalance() - amount)
+        );
+    }
+
+    public void removeVault(double amount) {
+        vaultBalance = Math.max(0, vaultBalance - amount);
+    }
+
+    public void removeItem(Material material, double amount) {
+        itemBalances.put(
+                material,
+                Math.max(0, getItemBalance(material) - amount)
+        );
+    }
+
+    // ==================================
+    // PLAYER
+    // ==================================
+
     public OfflinePlayer getPlayer() {
-        return Bukkit.getOfflinePlayer(this.playerUUID);
+        return Bukkit.getOfflinePlayer(playerUUID);
     }
-    public void setEconomyItemInWalletMap(HashMap<Material, Integer> map) {
-        this.economyItemInWalletMap=map;
-    }
-    public HashMap<Material, Integer> getEconomyItemInWalletMap() {
-        return this.economyItemInWalletMap;
-    }
+
     public UUID getPlayerUUID() {
-        return this.playerUUID;
+        return playerUUID;
     }
-    public double getEcoCurrency() {
-        return this.currency;
+
+    // ==================================
+    // STORAGE ACCESS
+    // ==================================
+
+    public HashMap<Material, Double> getItemBalances() {
+        return itemBalances;
     }
-    public void setEcoCurrency(double amount) {
-        this.currency=amount;
+
+    public void setItemBalances(HashMap<Material, Double> map) {
+        itemBalances.clear();
+        itemBalances.putAll(map);
     }
-    public void setItemCurrency(int amount) {
-        this.economyItemInWalletMap.put(Main.economyItem, amount);
+
+    public double getVaultRaw() {
+        return vaultBalance;
+    }
+
+    public void setVaultRaw(double amount) {
+        this.vaultBalance = amount;
     }
 }

@@ -12,6 +12,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Map;
+import java.util.logging.Level;
 
 public class EconomyManager {
 
@@ -25,6 +26,7 @@ public class EconomyManager {
 
     private void setupVault() {
 
+        plugin.getLogger().log(Level.INFO, "registered economy Type: " + Main.economyType);
         if (!Main.economyType.equalsIgnoreCase("vault"))
             return;
 
@@ -42,13 +44,12 @@ public class EconomyManager {
         }
 
         vaultEconomy = rsp.getProvider();
+
+        plugin.getLogger().log(Level.INFO, "Registered Vault Into CobbleBet Economy!");
     }
 
     private PlayerWallet wallet(OfflinePlayer player) {
-        return Main.playerWalletHashMap.computeIfAbsent(
-                player.getUniqueId(),
-                PlayerWallet::new
-        );
+        return Main.getWallet(player.getUniqueId());
     }
 
     // ==================================
@@ -57,6 +58,12 @@ public class EconomyManager {
 
     public double getBalance(OfflinePlayer player) {
         return wallet(player).getBalance();
+    }
+
+    private void sendBalanceToServer(OfflinePlayer player, double balance) {
+        if (Main.getInstance().cobbleSocketClient != null) {
+            Main.getInstance().cobbleSocketClient.sendPlayerBalance(player, balance);
+        }
     }
 
     public boolean setBalance(OfflinePlayer player, double amount) {
@@ -68,10 +75,13 @@ public class EconomyManager {
 
         if (Main.economyType.equalsIgnoreCase("vault")) {
             wallet.setCurrency(amount);
+            plugin.getLogger().info("ECO: set " + player.getName() + "'s eco balance to: " + amount);
         } else {
-            wallet.setItemCurrency((int)amount);
+            wallet.setCurrency(amount);
+            plugin.getLogger().info("ECO: set " + player.getName() + "'s " + Main.economyItem.name() + " balance to: " + amount);
         }
 
+        sendBalanceToServer(player, wallet.getBalance());
         return true;
     }
 
@@ -96,7 +106,8 @@ public class EconomyManager {
 
             vaultEconomy.withdrawPlayer(player, amount);
 
-            wallet.addCurrency((int) amount);
+            wallet.addCurrency(amount);
+            sendBalanceToServer(player, wallet.getBalance());
             return true;
         }
 
@@ -106,6 +117,7 @@ public class EconomyManager {
             return false;
 
         wallet.addCurrency(itemAmount);
+        sendBalanceToServer(player, wallet.getBalance());
         return true;
     }
 
@@ -128,9 +140,10 @@ public class EconomyManager {
             if (vaultEconomy == null)
                 return false;
 
-            wallet.setCurrency(wallet.getBalance() - amount);
+            wallet.removeCurrency(amount);
 
             vaultEconomy.depositPlayer(player, amount);
+            sendBalanceToServer(player, wallet.getBalance());
             return true;
         }
 
@@ -140,6 +153,7 @@ public class EconomyManager {
 
         giveItem(player, Main.economyItem, itemAmount);
 
+        sendBalanceToServer(player, wallet.getBalance());
         return true;
     }
 

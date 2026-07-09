@@ -3,6 +3,7 @@ package me.cobbleBet.connections;
 import com.google.gson.JsonObject;
 import me.cobbleBet.Main;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
@@ -16,7 +17,7 @@ public class CobbleSocketClient extends WebSocketClient {
 
 
     public CobbleSocketClient() throws URISyntaxException {
-        super(Main.testMode? new URI("ws://localhost:8908/mc") : new URI("ws://cobblebet.com:8908/mc"));
+        super(Main.testMode? new URI("ws://localhost:8908/mc") : new URI("wss://cobblebet.com/mc"));
 
         this.socketMessageHandler = new SocketMessageHandler(this);
     }
@@ -26,11 +27,13 @@ public class CobbleSocketClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake handshakedata) {
         JsonObject res = new JsonObject();
-        res.addProperty("type", "connected");
+        res.addProperty("type", "connect");
         res.addProperty("message", "Successfully connected to CobbleBet Plugin");
         res.addProperty("serverPort", Bukkit.getPort());
         res.addProperty("economyType", Main.economyType);
         res.addProperty("economyItem", Main.economyItem.toString());
+        res.addProperty("cobblebetPluginVersion", Main.cobblebetPluginVersion);
+        res.addProperty("pluginType", "Minecraft");
 
         this.send(res.toString());
     }
@@ -48,6 +51,19 @@ public class CobbleSocketClient extends WebSocketClient {
     @Override
     public void onError(Exception ex) {
 
+    }
+
+    public void sendPlayerBalance(OfflinePlayer player, double balance) {
+        if (player == null || !isOpen()) {
+            return;
+        }
+
+        JsonObject res = new JsonObject();
+        res.addProperty("type", "receivePlayerBalance");
+        res.addProperty("balance", balance);
+        res.addProperty("playerUUID", player.getUniqueId().toString());
+
+        this.send(res.toString());
     }
 
 

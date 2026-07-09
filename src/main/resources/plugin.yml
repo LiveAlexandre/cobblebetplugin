@@ -8,3 +8,4 @@ load: POSTWORLD
 commands:
   gamble:
   wallet:
+  cobblebet:

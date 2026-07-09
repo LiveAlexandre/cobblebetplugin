@@ -1,5 +1,81 @@
-# item = item economy | vault = Vault Economy
+############################################################
+#                CobbleBet Economy Configuration           #
+############################################################
+
+# ----------------------------------------
+# ECONOMY BACKEND
+# ----------------------------------------
+
+# Type of economy system used by the plugin
+# Options:
+#   - "item"  → physical item-based economy (e.g. DIAMOND)
+#   - "vault" → Vault-compatible economy plugin (EssentialsX, etc.)
 economyType: "item"
 
-# Item economy material
+# Only used when economyType = "item"
 economyItem: "DIAMOND"
+
+# Only used when economyType = "vault"
+vaultCurrencyName: "Coins"
+
+# ----------------------------------------
+# PERMISSIONS
+# ----------------------------------------
+
+#default permission is (Cobblebet.gamble)
+gambleCommandNeedsPermission: false
+
+
+# ----------------------------------------
+# BALANCE SETTINGS
+# ----------------------------------------
+
+# Maximum balance allowed (anti overflow / economy cap)
+maximumBalance: 999999
+
+
+
+# ----------------------------------------
+# DATABASE / PERSISTENCE (optional future-proofing)
+# ----------------------------------------
+
+database:
+  enabled: false
+  autosaveIntervalSeconds: 60
+
+
+# ----------------------------------------
+# COBBLEBET+ SUBSCRIPTION
+# ----------------------------------------
+
+# Only required if using premium features
+cobblebetToken: ""
+
+# Enables premium features if token is valid
+premiumEnabled: true
+
+
+# ----------------------------------------
+# BROADCAST SYSTEM
+# ----------------------------------------
+
+broadcastingEnabled: true
+
+broadcastPrefix: "<gradient:#00ff88:#00c3ff><bold>CobbleBet</bold></gradient> <dark_gray>»</dark_gray>"
+
+# Controls what gets broadcasted
+broadcastEvents:
+  bigWin: true
+  jackpot: true
+
+
+# Minimum win amount required for broadcast
+bigWinThreshold: 500
+
+
+# ----------------------------------------
+# DEBUG / DEVELOPMENT
+# ----------------------------------------
+
+debug:
+  testMode: false

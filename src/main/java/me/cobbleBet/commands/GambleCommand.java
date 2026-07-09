@@ -20,8 +20,13 @@ public class GambleCommand implements CommandExecutor {
 
         if(sender.hasPermission("Cobblebet.gamble")) {
             if(sender instanceof Player player) {
-                API.generateAndRegisterPlayerToken(player);
-                player.sendMessage(Component.text("Generating login token...", NamedTextColor.BLUE));
+                try {
+                    API.generateAndRegisterPlayerToken(player);
+                    player.sendMessage(Component.text("Generating login token...", NamedTextColor.BLUE));
+                }
+                catch (Exception ignored) {
+                    player.sendMessage(Component.text("CobbleBet Plugin is not connected to the CobbleBet server.", NamedTextColor.RED));
+                }
             }
 
         }
