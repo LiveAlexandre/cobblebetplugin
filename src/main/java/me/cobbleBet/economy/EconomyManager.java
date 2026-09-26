@@ -24,14 +24,61 @@ public class EconomyManager {
         setupVault();
     }
 
+    public String applySettings(String requestedType, String requestedItem) {
+        String type = requestedType == null ? "" : requestedType.trim().toLowerCase();
+        if (!type.equals("vault") && !type.equals("item")) {
+            return "Choose Vault or item currency.";
+        }
+
+        Material item = Main.economyItem;
+        Economy nextVault = null;
+        if (type.equals("vault")) {
+            if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
+                return "Vault is not installed. Install Vault and a Vault-compatible economy plugin first.";
+            }
+            RegisteredServiceProvider<Economy> rsp = Bukkit.getServicesManager().getRegistration(Economy.class);
+            if (rsp == null || rsp.getProvider() == null) {
+                return "No Vault economy provider is active. Check that your economy plugin supports Vault.";
+            }
+            nextVault = rsp.getProvider();
+        } else {
+            item = Material.matchMaterial(requestedItem == null ? "" : requestedItem.trim());
+            if (item == null || item.isAir() || !item.isItem()) {
+                return "That Minecraft item is not valid. Try a material name such as DIAMOND or EMERALD.";
+            }
+        }
+
+        String oldType = plugin.getConfig().getString("economyType", "vault");
+        String oldItem = plugin.getConfig().getString("economyItem", "DIAMOND");
+        plugin.getConfig().set("economyType", type);
+        if (type.equals("item")) plugin.getConfig().set("economyItem", item.name());
+        try {
+            plugin.saveConfig();
+        } catch (RuntimeException error) {
+            plugin.getConfig().set("economyType", oldType);
+            plugin.getConfig().set("economyItem", oldItem);
+            return "Could not save plugins/CobbleBet/config.yml. Check the server file permissions.";
+        }
+
+        vaultEconomy = nextVault;
+        Main.loadConfigValues();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            sendBalanceToServer(player, getBalance(player));
+        }
+        Main.getInstance().sendServerStatus();
+        return null;
+    }
     private void setupVault() {
 
         plugin.getLogger().log(Level.INFO, "registered economy Type: " + Main.economyType);
-        if (!Main.economyType.equalsIgnoreCase("vault"))
+        if (!Main.economyType.equalsIgnoreCase("vault")) {
+            refreshVaultCurrencyName();
             return;
+        }
 
         if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
             plugin.getLogger().warning("Vault not found!");
+            refreshVaultCurrencyName();
             return;
         }
 
@@ -40,12 +87,34 @@ public class EconomyManager {
 
         if (rsp == null) {
             plugin.getLogger().warning("No Vault economy provider found!");
+            refreshVaultCurrencyName();
             return;
         }
 
         vaultEconomy = rsp.getProvider();
+        refreshVaultCurrencyName();
 
         plugin.getLogger().log(Level.INFO, "Registered Vault Into CobbleBet Economy!");
+    }
+
+    public void refreshVaultCurrencyName() {
+        if (Main.vaultCurrencyName != null
+                && !Main.vaultCurrencyName.isBlank()
+                && !Main.vaultCurrencyName.equalsIgnoreCase("Coins")) {
+            return;
+        }
+
+        if (vaultEconomy != null) {
+            String providerCurrencyName = vaultEconomy.currencyNamePlural();
+            if (providerCurrencyName == null || providerCurrencyName.isBlank()) {
+                providerCurrencyName = vaultEconomy.currencyNameSingular();
+            }
+            Main.vaultCurrencyName = providerCurrencyName == null || providerCurrencyName.isBlank()
+                    ? "Coins"
+                    : providerCurrencyName;
+        } else {
+            Main.vaultCurrencyName = "Coins";
+        }
     }
 
     private PlayerWallet wallet(OfflinePlayer player) {

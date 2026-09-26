@@ -22,17 +22,25 @@ public class SocketMessageHandler {
         listeners.add(new SocketRequestBalanceListener("requestBalance", client));
         listeners.add(new SocketUpdateBalanceListener("updateBalance", client));
         listeners.add(new SocketRequestBroadcastListener("requestBroadcast", client));
+        listeners.add(new SocketAdminPanelResponseListener("adminPanelResponse", client));
+        listeners.add(new SocketGambleResultListener("gambleResult", client));
+        listeners.add(new SocketCoinflipOutcomeListener("coinflipOutcome", client));
+        listeners.add(new SocketSetEconomyListener("setEconomy", client));
+        listeners.add(new SocketSetPermissionRequirementsListener("setPermissionRequirements", client));
+        listeners.add(new SocketApprovalAcceptedListener("approvalAccepted", client));
+        listeners.add(new SocketPluginReleaseListener("pluginRelease", client));
+        listeners.add(new SocketApprovalRejectedListener("approvalRejected", client));
     }
 
 
     public void handleMessage(String msg) {
-        Bukkit.getLogger().log(Level.SEVERE, "Received Socket message : " + msg);
         JsonObject json = JsonParser.parseString(msg).getAsJsonObject();
         if(!json.has("type")) {
             Bukkit.getLogger().log(Level.WARNING, "REPORT THIS TO COBBLEBET ADMINS: json received from web socket has no type: " + msg);
             return;
         }
         String type = json.get("type").getAsString();
+        Bukkit.getLogger().log(Level.FINE, "Received CobbleBet socket message type: " + type);
 
         for(SocketMessageListener listener : listeners) {
             if(listener.type.equalsIgnoreCase(type)) {

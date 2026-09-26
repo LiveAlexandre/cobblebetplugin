@@ -7,13 +7,22 @@ import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.economy.EconomyManager;
 import me.cobbleBet.players.PlayerWallet;
 import me.cobbleBet.storage.PlayerWalletStorage;
+import me.cobbleBet.visuals.GamblingIndicatorManager;
+import me.cobbleBet.listeners.PluginUpdateListener;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.net.URISyntaxException;
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class Main extends JavaPlugin {
 
@@ -42,6 +51,7 @@ public final class Main extends JavaPlugin {
     // =========================
     public static String cobblebetToken;
     public static boolean premiumEnabled;
+    public static String serverDisplayName;
 
     // =========================
     // BROADCAST
@@ -66,6 +76,10 @@ public final class Main extends JavaPlugin {
     private PlayerWalletStorage playerWalletStorage;
     private EconomyManager economyManager;
     public CobbleSocketClient cobbleSocketClient;
+    public final ConcurrentHashMap<UUID, Long> pendingAdminPanelRequests = new ConcurrentHashMap<>();
+    public GamblingIndicatorManager gamblingIndicatorManager;
+    private volatile String officialPluginVersion = "";
+    private volatile String officialPluginJarName = "CobbleBet.jar";
 
     @Override
     public void onEnable() {
@@ -76,16 +90,23 @@ public final class Main extends JavaPlugin {
 
         loadStorage();
         economyManager = new EconomyManager(this);
+        gamblingIndicatorManager = new GamblingIndicatorManager(this);
         registerCommands();
+        getServer().getPluginManager().registerEvents(new PluginUpdateListener(this), this);
         connectSocket();
+        startStatusUpdates();
 
         getLogger().info("CobbleBet loaded successfully.");
     }
 
     @Override
     public void onDisable() {
+        if (cobbleSocketClient != null) cobbleSocketClient.shutdown();
         if (playerWalletStorage != null) {
             playerWalletStorage.saveAll();
+        }
+        if (gamblingIndicatorManager != null) {
+            gamblingIndicatorManager.clearAll();
         }
     }
 
@@ -95,7 +116,7 @@ public final class Main extends JavaPlugin {
     public static void loadConfigValues() {
 
         // ECONOMY
-        economyType = Main.getInstance().getConfig().getString("economyType", "item");
+        economyType = Main.getInstance().getConfig().getString("economyType", "vault");
 
         String itemName = Main.getInstance().getConfig().getString("economyItem", "DIAMOND");
         try {
@@ -107,11 +128,12 @@ public final class Main extends JavaPlugin {
 
         gambleCommandNeedsPermission = Main.getInstance().getConfig().getBoolean("gambleCommandNeedsPermission", false);
 
-        vaultCurrencyName = Main.getInstance().getConfig().getString("vaultCurrencyName", "Coins");
+        vaultCurrencyName = Main.getInstance().getConfig().getString("vaultCurrencyName", "");
         maximumBalance = Main.getInstance().getConfig().getLong("maximumBalance", 1000000000L);
 
         // PREMIUM
         cobblebetToken = Main.getInstance().getConfig().getString("cobblebetToken", "");
+        serverDisplayName = Main.getInstance().getConfig().getString("serverName", "").trim();
         premiumEnabled = Main.getInstance().getConfig().getBoolean("premiumEnabled", false);
 
         // BROADCAST SETTINGS
@@ -141,6 +163,10 @@ public final class Main extends JavaPlugin {
         // DEBUG
         testMode = Main.getInstance().getConfig().getBoolean("debug.testMode", false);
 
+        if (Main.getInstance().economyManager != null) {
+            Main.getInstance().economyManager.refreshVaultCurrencyName();
+        }
+
         // LOG
         Bukkit.getLogger().info("=== CobbleBet Config Loaded ===");
         Bukkit.getLogger().info("Economy: " + economyType);
@@ -165,7 +191,78 @@ public final class Main extends JavaPlugin {
         }
     }
 
+    public void reconnectSocket() {
+        if (cobbleSocketClient != null) cobbleSocketClient.shutdown();
+        connectSocket();
+    }
+
+    public void setOfficialPluginRelease(String version, String jarName) {
+        if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
+        if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
+    }
+
+    public void notifyAdminAboutPluginUpdate(Player player) {
+        if (player == null || !player.isOnline() || !player.hasPermission("cobblebet.admin")) return;
+        String installedVersion = getDescription().getVersion();
+        String latestVersion = officialPluginVersion;
+        if (latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
+        player.sendMessage("§5[CobbleBet] §dPlugin update available: §f" + installedVersion + " §7→ §f" + latestVersion
+                + "§d. Download §f" + officialPluginJarName + " §dfrom §fhttps://cobblebet.com/api/download-plugin§d, replace the JAR, then restart.");
+    }
+
+    private static boolean isOlderVersion(String installed, String latest) {
+        String[] installedParts = installed.split("[.+-]", 4);
+        String[] latestParts = latest.split("[.+-]", 4);
+        for (int index = 0; index < 3; index++) {
+            int installedPart = parseVersionPart(installedParts, index);
+            int latestPart = parseVersionPart(latestParts, index);
+            if (installedPart != latestPart) return installedPart < latestPart;
+        }
+        return installed.contains("-") && !latest.contains("-");
+    }
+
+    private static int parseVersionPart(String[] parts, int index) {
+        if (index >= parts.length) return 0;
+        try { return Integer.parseInt(parts[index].replaceAll("[^0-9].*$", "")); }
+        catch (NumberFormatException ignored) { return 0; }
+    }
+
     // =========================
+    private void startStatusUpdates() {
+        Bukkit.getScheduler().runTaskTimer(this, this::sendServerStatus, 20L, 600L);
+    }
+
+    public void sendServerStatus() {
+        if (cobbleSocketClient == null || !cobbleSocketClient.isApproved()) return;
+        JsonObject status = new JsonObject();
+        status.addProperty("type", "serverStatus");
+        status.addProperty("serverName", serverDisplayName == null || serverDisplayName.isBlank() ? Bukkit.getMotd() : serverDisplayName);
+        status.addProperty("pluginName", "CobbleBet");
+        status.addProperty("pluginVersion", getDescription().getVersion());
+        status.addProperty("economyType", economyType);
+        status.addProperty("economyItem", economyItem == null ? "" : economyItem.name());
+        status.addProperty("currencyName", economyType.equalsIgnoreCase("vault") ? vaultCurrencyName : (economyItem == null ? "Coins" : economyItem.name()));
+        status.add("permissionRequirements", getPermissionRequirements());
+        JsonArray players = new JsonArray();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            JsonObject entry = new JsonObject();
+            entry.addProperty("uuid", player.getUniqueId().toString());
+            entry.addProperty("name", player.getName());
+            players.add(entry);
+        }
+        status.add("onlinePlayers", players);
+        cobbleSocketClient.send(status.toString());
+    }
+
+    public String readServerIconDataUrl() {
+        try {
+            File icon = new File("server-icon.png");
+            if (!icon.isFile() || icon.length() > 70_000) return "";
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(icon.toPath()));
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
     // STORAGE
     // =========================
     private void loadStorage() {
@@ -193,6 +290,22 @@ public final class Main extends JavaPlugin {
     // =========================
     public static PlayerWallet getWallet(UUID uuid) {
         return playerWalletHashMap.computeIfAbsent(uuid, PlayerWallet::new);
+    }
+
+    public static boolean isPermissionRequired(String key) {
+        if (instance == null) return true;
+        boolean fallback = "gamble".equals(key)
+                ? instance.getConfig().getBoolean("gambleCommandNeedsPermission", false)
+                : true;
+        return instance.getConfig().getBoolean("permissions." + key, fallback);
+    }
+
+    public static JsonObject getPermissionRequirements() {
+        JsonObject requirements = new JsonObject();
+        requirements.addProperty("gamble", isPermissionRequired("gamble"));
+        requirements.addProperty("admin", isPermissionRequired("admin"));
+        requirements.addProperty("walletAdmin", isPermissionRequired("walletAdmin"));
+        return requirements;
     }
 
     public static Main getInstance() {

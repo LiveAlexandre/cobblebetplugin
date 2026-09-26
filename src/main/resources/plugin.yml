@@ -9,3 +9,13 @@ commands:
   gamble:
   wallet:
   cobblebet:
+permissions:
+  cobblebet.admin:
+    description: Manage CobbleBet settings and receive plugin update notices.
+    default: op
+  cobblebet.gamble:
+    description: Gamble :D
+    default: op
+  cobblebet.wallet.admin:
+    description: Manage CobbleBet player wallet balances.
+    default: op

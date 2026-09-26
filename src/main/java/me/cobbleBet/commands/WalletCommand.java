@@ -94,11 +94,11 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
         double vault = wallet.getVaultBalance();
 
         if (Main.economyType.equalsIgnoreCase("vault")) {
-            sb.append("<yellow>" + Main.vaultCurrencyName + ": $")
+            sb.append("<yellow>" + Main.vaultCurrencyName + ": ")
                     .append(vault)
                     .append("</yellow>\n");
         } else {
-            sb.append("<gray>" + Main.vaultCurrencyName + ": $")
+            sb.append("<gray>" + Main.vaultCurrencyName + ": ")
                     .append(vault)
                     .append("</gray>\n");
         }
@@ -169,7 +169,7 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
     // =========================
     private void handleSet(Player player, String[] args) {
 
-        if (!player.hasPermission("cobblebet.wallet.admin")) {
+        if (Main.isPermissionRequired("walletAdmin") && !player.hasPermission("cobblebet.wallet.admin")) {
             player.sendMessage(error("No permission."));
             return;
         }
