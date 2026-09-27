@@ -42,9 +42,12 @@ public class SocketGambleResultListener extends SocketMessageListener {
             }
 
             String currency = json.has("currency") ? json.get("currency").getAsString() : Main.vaultCurrencyName;
+            double multiplier = json.has("multiplier") ? json.get("multiplier").getAsDouble() : 0;
+            if (!Double.isFinite(multiplier) || multiplier < 0) multiplier = 0;
+            final double payoutMultiplier = multiplier;
             Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
                 if (Main.getInstance().gamblingIndicatorManager != null) {
-                    Main.getInstance().gamblingIndicatorManager.showResult(playerId, won, amount, currency);
+                    Main.getInstance().gamblingIndicatorManager.showResult(playerId, won, amount, currency, payoutMultiplier);
                 }
             });
         } catch (IllegalArgumentException | UnsupportedOperationException e) {

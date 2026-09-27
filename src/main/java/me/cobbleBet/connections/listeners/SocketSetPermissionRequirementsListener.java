@@ -22,7 +22,7 @@ public class SocketSetPermissionRequirementsListener extends SocketMessageListen
                 plugin.getConfig().set("permissions.gamble", readRequired(requested, "gamble"));
                 plugin.getConfig().set("permissions.admin", readRequired(requested, "admin"));
                 plugin.getConfig().set("permissions.walletAdmin", readRequired(requested, "walletAdmin"));
-                plugin.saveConfig();
+                me.cobbleBet.storage.WebsiteSettingsStore.saveConfirmed(plugin);
                 JsonObject result = new JsonObject();
                 result.addProperty("type", "permissionSettingsResult");
                 result.addProperty("requestId", requestId);
@@ -31,6 +31,8 @@ public class SocketSetPermissionRequirementsListener extends SocketMessageListen
                 result.add("permissionRequirements", Main.getPermissionRequirements());
                 client.send(result.toString());
             } catch (Exception error) {
+                plugin.reloadConfig();
+                Main.loadConfigValues();
                 JsonObject result = new JsonObject();
                 result.addProperty("type", "permissionSettingsResult");
                 result.addProperty("requestId", requestId);

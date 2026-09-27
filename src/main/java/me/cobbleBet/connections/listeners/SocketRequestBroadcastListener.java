@@ -27,10 +27,13 @@ public class SocketRequestBroadcastListener extends SocketMessageListener {
             if (!json.has("amount")) return;
             try {
                 amount = json.get("amount").getAsDouble();
+                double betAmount = json.has("betAmount") ? json.get("betAmount").getAsDouble() : 0;
+                double multiplier = json.has("multiplier") ? json.get("multiplier").getAsDouble() : 0;
+                if (!Double.isFinite(amount) || amount < Main.bigWinThreshold || !Double.isFinite(betAmount)
+                        || betAmount <= 0 || !Double.isFinite(multiplier) || multiplier <= 3 || amount / betAmount <= 3) return;
             } catch (RuntimeException ignored) {
                 return;
             }
-            if (!Double.isFinite(amount) || amount < Main.bigWinThreshold) return;
         }
 
         final double winningAmount = amount;

@@ -2,6 +2,7 @@ package me.cobbleBet;
 
 import me.cobbleBet.commands.CobbleBetCommand;
 import me.cobbleBet.commands.GambleCommand;
+import me.cobbleBet.commands.GameShortcutCommand;
 import me.cobbleBet.commands.WalletCommand;
 import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.economy.EconomyManager;
@@ -87,16 +88,24 @@ public final class Main extends JavaPlugin {
 
         saveDefaultConfig();
         loadConfigValues();
+        me.cobbleBet.storage.WebsiteSettingsStore.load(this);
 
         loadStorage();
         economyManager = new EconomyManager(this);
         gamblingIndicatorManager = new GamblingIndicatorManager(this);
         registerCommands();
         getServer().getPluginManager().registerEvents(new PluginUpdateListener(this), this);
+        getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         connectSocket();
         startStatusUpdates();
 
         getLogger().info("CobbleBet loaded successfully.");
+    }
+
+    @Override
+    public void saveConfig() {
+        me.cobbleBet.storage.WebsiteSettingsStore.moveToBottom(getConfig());
+        super.saveConfig();
     }
 
     @Override
@@ -162,6 +171,10 @@ public final class Main extends JavaPlugin {
 
         // DEBUG
         testMode = Main.getInstance().getConfig().getBoolean("debug.testMode", false);
+
+        if (Main.getInstance().gamblingIndicatorManager != null) {
+            Main.getInstance().gamblingIndicatorManager.reloadSettings();
+        }
 
         if (Main.getInstance().economyManager != null) {
             Main.getInstance().economyManager.refreshVaultCurrencyName();
@@ -243,6 +256,8 @@ public final class Main extends JavaPlugin {
         status.addProperty("economyItem", economyItem == null ? "" : economyItem.name());
         status.addProperty("currencyName", economyType.equalsIgnoreCase("vault") ? vaultCurrencyName : (economyItem == null ? "Coins" : economyItem.name()));
         status.add("permissionRequirements", getPermissionRequirements());
+        status.addProperty("broadcastingEnabled", broadcastingEnabled && broadcastEvents.getOrDefault("bigWin", false));
+        status.addProperty("bigWinThreshold", bigWinThreshold);
         JsonArray players = new JsonArray();
         for (Player player : Bukkit.getOnlinePlayers()) {
             JsonObject entry = new JsonObject();
@@ -275,6 +290,12 @@ public final class Main extends JavaPlugin {
     // =========================
     private void registerCommands() {
         getCommand("gamble").setExecutor(new GambleCommand());
+
+        GameShortcutCommand gameShortcut = new GameShortcutCommand();
+        getCommand("mines").setExecutor(gameShortcut);
+        getCommand("blackjack").setExecutor(gameShortcut);
+        getCommand("roulette").setExecutor(gameShortcut);
+        getCommand("coinflip").setExecutor(gameShortcut);
 
         WalletCommand wallet = new WalletCommand();
         getCommand("wallet").setExecutor(wallet);

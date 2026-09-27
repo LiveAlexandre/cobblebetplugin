@@ -42,6 +42,7 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             JsonObject request = new JsonObject();
             request.addProperty("type", "requestAdminPanel");
             request.addProperty("playerUUID", player.getUniqueId().toString());
+            request.addProperty("playerName", player.getName());
             Main.getInstance().pendingAdminPanelRequests.put(player.getUniqueId(), System.currentTimeMillis() + 30_000);
             try {
                 Main.getInstance().cobbleSocketClient.send(request.toString());
@@ -86,7 +87,10 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             long start = System.currentTimeMillis();
 
             try {
-                Main.loadConfigValues(); // basic reload
+                Main.getInstance().reloadConfig();
+                Main.loadConfigValues();
+                me.cobbleBet.storage.WebsiteSettingsStore.load(Main.getInstance());
+                Main.getInstance().reconnectSocket();
 
                 long time = System.currentTimeMillis() - start;
                 sender.sendMessage("§aCobbleBet config reloaded successfully in §f" + time + "ms§a.");

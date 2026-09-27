@@ -53,8 +53,8 @@ public class EconomyManager {
         plugin.getConfig().set("economyType", type);
         if (type.equals("item")) plugin.getConfig().set("economyItem", item.name());
         try {
-            plugin.saveConfig();
-        } catch (RuntimeException error) {
+            me.cobbleBet.storage.WebsiteSettingsStore.saveConfirmed(Main.getInstance());
+        } catch (Exception error) {
             plugin.getConfig().set("economyType", oldType);
             plugin.getConfig().set("economyItem", oldItem);
             return "Could not save plugins/CobbleBet/config.yml. Check the server file permissions.";

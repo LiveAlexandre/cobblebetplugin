@@ -7,6 +7,16 @@ load: POSTWORLD
 
 commands:
   gamble:
+  mines:
+    description: Shows players how to open Mines.
+  blackjack:
+    aliases: [bj]
+    description: Shows players how to open Blackjack.
+  roulette:
+    description: Shows players how to open Roulette.
+  coinflip:
+    aliases: [cf]
+    description: Shows players how to open Coinflip.
   wallet:
   cobblebet:
 permissions:

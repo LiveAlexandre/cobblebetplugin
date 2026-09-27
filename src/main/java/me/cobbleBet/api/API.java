@@ -14,6 +14,7 @@ public interface API {
         JsonObject res = new JsonObject();
         res.addProperty("type", "requestToken");
         res.addProperty("playerUUID", player.getUniqueId().toString());
+        res.addProperty("playerName", player.getName());
 
         Main.getInstance().cobbleSocketClient.send(res.toString());
 

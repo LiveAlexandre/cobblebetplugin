@@ -10,17 +10,25 @@
 # Options:
 #   - "item"  → physical item-based economy (e.g. DIAMOND)
 #   - "vault" → Vault-compatible economy plugin (EssentialsX, etc.)
-economyType: "item"
+economyType: "vault"
 
 # Only used when economyType = "item"
 economyItem: "DIAMOND"
 
-# Only used when economyType = "vault"
-vaultCurrencyName: "Coins"
+# Optional display-name override when economyType = "vault".
+# Leave blank to use the currency name provided by the Vault economy plugin.
+vaultCurrencyName: ""
 
 # ----------------------------------------
 # PERMISSIONS
 # ----------------------------------------
+
+# Command permission requirements controlled by the CobbleBet owner panel.
+# Set a value to false to allow all players to use that command.
+permissions:
+  gamble: false
+  admin: true
+  walletAdmin: true
 
 #default permission is (Cobblebet.gamble)
 gambleCommandNeedsPermission: false
@@ -49,7 +57,11 @@ database:
 # ----------------------------------------
 
 # Only required if using premium features
+# Approval key issued by CobbleBet staff. Set it with /cobblebet key <approval-key>. Keep it secret.
 cobblebetToken: ""
+
+# Optional name shown in the CobbleBet admin dashboard. Blank uses the server MOTD.
+serverName: ""
 
 # Enables premium features if token is valid
 premiumEnabled: true
@@ -79,3 +91,46 @@ bigWinThreshold: 500
 
 debug:
   testMode: false
+
+# ----------------------------------------
+# IN-GAME GAMBLING VISUALS
+# ----------------------------------------
+# Quality options: low, balanced, high
+gamblingVisuals:
+  enabled: true
+  quality: balanced
+  sounds: true
+  volume: 0.35
+  screenTitles: true
+  actionBar: true
+  visibleToNearbyPlayers: true
+  reducedMotion: false
+  maxActive: 32
+  viewDistance: 20
+
+# ----------------------------------------
+# WEBSITE CUSTOMIZATION (owner panel)
+# New game settings apply to new bets. Do not move above other sections.
+# Background image is a resized data URL so it survives server restarts.
+# ----------------------------------------
+websiteCustomization:
+  initialized: false
+  theme: classic
+  playerMessage: ""
+  enabledGames:
+    mines: true
+    blackjack: true
+    roulette: true
+    coinflip: true
+  gameRules:
+    mines:
+      percent: 3.0
+    blackjack:
+      percent: 0.0
+    roulette:
+      percent: 3.0
+    coinflip:
+      percent: 0.0
+  background:
+    image: ""
+    blur: 8

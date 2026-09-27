@@ -37,7 +37,11 @@ public class CobbleSocketClient extends WebSocketClient {
         String currencyName = Main.economyType.equalsIgnoreCase("vault") ? Main.vaultCurrencyName : Main.economyItem.toString();
         hello.addProperty("currencyName", currencyName == null || currencyName.isBlank() ? "Coins" : currencyName);
         hello.addProperty("bigWinThreshold", Main.bigWinThreshold);
+        hello.addProperty("broadcastingEnabled", Main.broadcastingEnabled && Main.broadcastEvents.getOrDefault("bigWin", false));
         hello.add("permissionRequirements", Main.getPermissionRequirements());
+        hello.addProperty("supportsWebsiteSettings", true);
+        hello.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());
+        hello.add("websiteSettings", me.cobbleBet.storage.WebsiteSettingsStore.getSettings());
         String icon = Main.getInstance().readServerIconDataUrl();
         if (!icon.isBlank()) hello.addProperty("serverIcon", icon);
         this.send(hello.toString());
