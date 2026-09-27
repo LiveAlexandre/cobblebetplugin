@@ -12,6 +12,11 @@ import me.cobbleBet.visuals.GamblingIndicatorManager;
 import me.cobbleBet.listeners.PluginUpdateListener;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -28,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Main extends JavaPlugin {
 
     private static Main instance;
+    private static final String PLUGIN_DOWNLOAD_URL = "https://cobblebet.com/api/download-plugin";
+    private final ConcurrentHashMap<UUID, String> notifiedUpdateVersions = new ConcurrentHashMap<>();
 
     public static double cobblebetPluginVersion = 1.1;
 
@@ -212,6 +219,11 @@ public final class Main extends JavaPlugin {
     public void setOfficialPluginRelease(String version, String jarName) {
         if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
+        Bukkit.getScheduler().runTask(this, () -> Bukkit.getOnlinePlayers().forEach(this::notifyAdminAboutPluginUpdate));
+    }
+
+    public void resetPluginUpdateNotification(UUID playerId) {
+        if (playerId != null) notifiedUpdateVersions.remove(playerId);
     }
 
     public void notifyAdminAboutPluginUpdate(Player player) {
@@ -219,8 +231,22 @@ public final class Main extends JavaPlugin {
         String installedVersion = getDescription().getVersion();
         String latestVersion = officialPluginVersion;
         if (latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
-        player.sendMessage("§5[CobbleBet] §dPlugin update available: §f" + installedVersion + " §7→ §f" + latestVersion
-                + "§d. Download §f" + officialPluginJarName + " §dfrom §fhttps://cobblebet.com/api/download-plugin§d, replace the JAR, then restart.");
+        if (latestVersion.equals(notifiedUpdateVersions.put(player.getUniqueId(), latestVersion))) return;
+
+        Component download = Component.text("Download " + officialPluginJarName, NamedTextColor.LIGHT_PURPLE)
+                .decorate(TextDecoration.BOLD, TextDecoration.UNDERLINED)
+                .clickEvent(ClickEvent.openUrl(PLUGIN_DOWNLOAD_URL))
+                .hoverEvent(HoverEvent.showText(Component.text("Open the official CobbleBet download", NamedTextColor.GRAY)));
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("[CobbleBet] ", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD)
+                .append(Component.text("A plugin update is available!", NamedTextColor.LIGHT_PURPLE).decorate(TextDecoration.BOLD)));
+        player.sendMessage(Component.text("Installed ", NamedTextColor.GRAY)
+                .append(Component.text(installedVersion, NamedTextColor.WHITE))
+                .append(Component.text("  →  Latest ", NamedTextColor.GRAY))
+                .append(Component.text(latestVersion, NamedTextColor.GREEN)));
+        player.sendMessage(Component.text("Click to update: ", NamedTextColor.GRAY).append(download));
+        player.sendMessage(Component.text("Replace the old JAR and restart your server.", NamedTextColor.DARK_GRAY));
+        player.sendMessage(Component.empty());
     }
 
     private static boolean isOlderVersion(String installed, String latest) {

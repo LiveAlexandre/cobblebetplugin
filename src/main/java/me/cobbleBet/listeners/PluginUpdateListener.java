@@ -17,6 +17,8 @@ public final class PluginUpdateListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        plugin.resetPluginUpdateNotification(player.getUniqueId());
         Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.notifyAdminAboutPluginUpdate(player), 60L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.notifyAdminAboutPluginUpdate(player), 200L);
     }
 }
