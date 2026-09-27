@@ -26,9 +26,6 @@ public class GambleCommand implements CommandExecutor {
         }
 
         try {
-            if (main.gamblingIndicatorManager != null) {
-                main.gamblingIndicatorManager.startGambling(player);
-            }
             API.generateAndRegisterPlayerToken(player);
             player.sendMessage(Component.text("Generating login token...", NamedTextColor.BLUE));
         } catch (Exception ignored) {
