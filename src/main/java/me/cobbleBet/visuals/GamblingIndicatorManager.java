@@ -55,6 +55,7 @@ public final class GamblingIndicatorManager {
     private final Map<UUID, Indicator> indicators = new HashMap<>();
     private final Map<UUID, Long> webPages = new HashMap<>();
     private final Map<UUID, Long> lastMovementAt = new HashMap<>();
+    private final Map<UUID, BukkitTask> pendingIdleChecks = new HashMap<>();
     private final BukkitTask animationLoop;
     private long ticks;
     private long retryAfter;
@@ -107,11 +108,16 @@ public final class GamblingIndicatorManager {
     public void setWebGamePage(UUID playerId, boolean active) {
         if (playerId == null) return;
         if (active) {
-            webPages.put(playerId, System.currentTimeMillis() + PAGE_LEASE_MILLIS);
-            lastMovementAt.putIfAbsent(playerId, System.currentTimeMillis());
+            long now = System.currentTimeMillis();
+            boolean resumed = webPages.getOrDefault(playerId, 0L) <= now;
+            webPages.put(playerId, now + PAGE_LEASE_MILLIS);
+            if (resumed) lastMovementAt.put(playerId, now);
+            else lastMovementAt.putIfAbsent(playerId, now);
+            scheduleIdleIndicator(playerId);
         } else {
             webPages.remove(playerId);
             lastMovementAt.remove(playerId);
+            cancelIdleCheck(playerId);
             Indicator indicator = indicators.get(playerId);
             // Let an already received result finish its exit animation.
             if (indicator != null && indicator.result == null) clear(playerId);
@@ -120,7 +126,10 @@ public final class GamblingIndicatorManager {
 
     public void onPlayerMove(Player player) {
         UUID id = player.getUniqueId();
-        if (webPages.containsKey(id)) lastMovementAt.put(id, System.currentTimeMillis());
+        if (webPages.containsKey(id)) {
+            lastMovementAt.put(id, System.currentTimeMillis());
+            scheduleIdleIndicator(id);
+        }
         Indicator indicator = indicators.get(id);
         if (indicator != null && indicator.result == null) clear(id);
         else if (indicator != null) indicator.preview = false;
@@ -135,11 +144,15 @@ public final class GamblingIndicatorManager {
         clear(id);
         webPages.remove(id);
         lastMovementAt.remove(id);
+        cancelIdleCheck(id);
     }
 
     public void onPlayerTeleport(Player player) {
         clear(player.getUniqueId());
-        if (webPages.containsKey(player.getUniqueId())) lastMovementAt.put(player.getUniqueId(), System.currentTimeMillis());
+        if (webPages.containsKey(player.getUniqueId())) {
+            lastMovementAt.put(player.getUniqueId(), System.currentTimeMillis());
+            scheduleIdleIndicator(player.getUniqueId());
+        }
     }
 
     public void showResult(UUID playerId, boolean won, double amount, String currency) {
@@ -184,6 +197,28 @@ public final class GamblingIndicatorManager {
         for (UUID playerId : indicators.keySet().toArray(UUID[]::new)) clear(playerId);
         webPages.clear();
         lastMovementAt.clear();
+        for (BukkitTask task : pendingIdleChecks.values()) task.cancel();
+        pendingIdleChecks.clear();
+    }
+
+    private void scheduleIdleIndicator(UUID playerId) {
+        cancelIdleCheck(playerId);
+        long delayTicks = Math.max(1L, (IDLE_DELAY_MILLIS + 49L) / 50L);
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            pendingIdleChecks.remove(playerId);
+            long now = System.currentTimeMillis();
+            if (!enabled || indicators.containsKey(playerId) || !idle(playerId, now)) return;
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline() || player.isDead()) return;
+            Indicator indicator = create(player, false);
+            if (indicator != null) indicators.put(playerId, indicator);
+        }, delayTicks);
+        pendingIdleChecks.put(playerId, task);
+    }
+
+    private void cancelIdleCheck(UUID playerId) {
+        BukkitTask pending = pendingIdleChecks.remove(playerId);
+        if (pending != null) pending.cancel();
     }
 
     private void tickAll() {
