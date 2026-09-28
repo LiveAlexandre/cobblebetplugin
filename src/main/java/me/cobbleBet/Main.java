@@ -23,12 +23,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.net.URISyntaxException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.io.File;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarFile;
 
 public final class Main extends JavaPlugin {
 
@@ -76,6 +85,7 @@ public final class Main extends JavaPlugin {
     // DEBUG
     // =========================
     public static boolean testMode;
+    public static boolean autoUpdateEnabled;
 
     // =========================
     // RUNTIME
@@ -89,6 +99,8 @@ public final class Main extends JavaPlugin {
     public GamblingIndicatorManager gamblingIndicatorManager;
     private volatile String officialPluginVersion = "";
     private volatile String officialPluginJarName = "CobbleBet.jar";
+    private final AtomicBoolean updateDownloadRunning = new AtomicBoolean(false);
+    private volatile String stagedPluginVersion = "";
 
     @Override
     public void onEnable() {
@@ -181,6 +193,7 @@ public final class Main extends JavaPlugin {
 
         // DEBUG
         testMode = Main.getInstance().getConfig().getBoolean("debug.testMode", false);
+        autoUpdateEnabled = Main.getInstance().getConfig().getBoolean("autoUpdate", true);
 
         if (Main.getInstance().gamblingIndicatorManager != null) {
             Main.getInstance().gamblingIndicatorManager.reloadSettings();
@@ -200,6 +213,7 @@ public final class Main extends JavaPlugin {
         Bukkit.getLogger().info("Broadcasting: " + broadcastingEnabled);
         Bukkit.getLogger().info("Broadcast Events: " + broadcastEvents);
         Bukkit.getLogger().info("Test Mode: " + testMode);
+        Bukkit.getLogger().info("Auto Update: " + autoUpdateEnabled);
     }
 
     private void ensureServerId() {
@@ -235,7 +249,54 @@ public final class Main extends JavaPlugin {
     public void setOfficialPluginRelease(String version, String jarName) {
         if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
+        stagePluginUpdateIfNeeded();
         Bukkit.getScheduler().runTask(this, () -> Bukkit.getOnlinePlayers().forEach(this::notifyAdminAboutPluginUpdate));
+    }
+
+    private void stagePluginUpdateIfNeeded() {
+        String installedVersion = getDescription().getVersion();
+        String latestVersion = officialPluginVersion;
+        if (!autoUpdateEnabled || latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
+        if (latestVersion.equals(stagedPluginVersion) || !updateDownloadRunning.compareAndSet(false, true)) return;
+
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            File temporary = null;
+            try {
+                File updateFolder = getServer().getUpdateFolderFile();
+                Files.createDirectories(updateFolder.toPath());
+                temporary = File.createTempFile("cobblebet-update-", ".jar", updateFolder);
+                HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL)
+                        .connectTimeout(Duration.ofSeconds(12)).build();
+                HttpRequest request = HttpRequest.newBuilder(URI.create(PLUGIN_DOWNLOAD_URL))
+                        .timeout(Duration.ofSeconds(45)).header("User-Agent", "CobbleBet/" + installedVersion).build();
+                HttpResponse<InputStream> response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                if (response.statusCode() != 200) throw new IllegalStateException("download returned HTTP " + response.statusCode());
+                try (InputStream input = response.body()) {
+                    Files.copy(input, temporary.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+                if (temporary.length() < 1024 || temporary.length() > 50_000_000) throw new IllegalStateException("downloaded JAR size is invalid");
+                try (JarFile jar = new JarFile(temporary)) {
+                    if (jar.getJarEntry("plugin.yml") == null) throw new IllegalStateException("downloaded file is not a Bukkit plugin JAR");
+                }
+                File target = new File(updateFolder, getFile().getName());
+                try {
+                    Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                    Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+                temporary = null;
+                stagedPluginVersion = latestVersion;
+                getLogger().info("CobbleBet " + latestVersion + " downloaded to " + target + ". It will install on the next server restart.");
+                Bukkit.getScheduler().runTask(this, () -> Bukkit.getOnlinePlayers().stream()
+                        .filter(player -> player.hasPermission("cobblebet.admin"))
+                        .forEach(player -> player.sendMessage(Component.text("[CobbleBet] Update " + latestVersion + " is ready and will install on the next server restart.", NamedTextColor.GREEN))));
+            } catch (Exception error) {
+                getLogger().warning("Automatic CobbleBet update failed: " + error.getMessage());
+            } finally {
+                if (temporary != null) try { Files.deleteIfExists(temporary.toPath()); } catch (Exception ignored) {}
+                updateDownloadRunning.set(false);
+            }
+        });
     }
 
     public void resetPluginUpdateNotification(UUID playerId) {
@@ -294,6 +355,7 @@ public final class Main extends JavaPlugin {
         status.addProperty("serverName", serverDisplayName == null || serverDisplayName.isBlank() ? Bukkit.getMotd() : serverDisplayName);
         status.addProperty("pluginName", "CobbleBet");
         status.addProperty("pluginVersion", getDescription().getVersion());
+        status.addProperty("autoUpdateEnabled", autoUpdateEnabled);
         status.addProperty("economyType", economyType);
         status.addProperty("economyItem", economyItem == null ? "" : economyItem.name());
         status.addProperty("currencyName", economyType.equalsIgnoreCase("vault") ? vaultCurrencyName : (economyItem == null ? "Coins" : economyItem.name()));

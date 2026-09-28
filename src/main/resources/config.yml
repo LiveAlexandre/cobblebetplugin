@@ -23,6 +23,10 @@ vaultCurrencyName: ""
 # Generated automatically on first start. Do not copy this value between different servers.
 serverId: ""
 
+# Automatically download verified CobbleBet updates into plugins/update.
+# The staged update is installed safely the next time the server restarts.
+autoUpdate: true
+
 # ----------------------------------------
 # PERMISSIONS
 # ----------------------------------------

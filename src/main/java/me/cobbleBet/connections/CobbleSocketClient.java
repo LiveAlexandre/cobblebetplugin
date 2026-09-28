@@ -91,11 +91,16 @@ public class CobbleSocketClient extends WebSocketClient {
     }
 
     public void sendPlayerBalance(OfflinePlayer player, double balance) {
+        sendPlayerBalance(player, balance, null);
+    }
+
+    public void sendPlayerBalance(OfflinePlayer player, double balance, Long balanceRevision) {
         if (player == null || !isApproved()) return;
         JsonObject res = new JsonObject();
         res.addProperty("type", "receivePlayerBalance");
         res.addProperty("balance", balance);
         res.addProperty("playerUUID", player.getUniqueId().toString());
+        if (balanceRevision != null && balanceRevision >= 0) res.addProperty("balanceRevision", balanceRevision);
         this.send(res.toString());
     }
 

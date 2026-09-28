@@ -22,7 +22,9 @@ public class SocketRequestBalanceListener extends SocketMessageListener {
             OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
 
             double balance = Main.getInstance().getEconomyManager().getBalance(player);
-            this.client.sendPlayerBalance(player, balance);
+            Long balanceRevision = json.has("balanceRevision") && !json.get("balanceRevision").isJsonNull()
+                    ? json.get("balanceRevision").getAsLong() : null;
+            this.client.sendPlayerBalance(player, balance, balanceRevision);
 
         }
 
