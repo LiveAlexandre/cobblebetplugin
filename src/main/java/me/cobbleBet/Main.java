@@ -9,7 +9,6 @@ import me.cobbleBet.economy.EconomyManager;
 import me.cobbleBet.players.PlayerWallet;
 import me.cobbleBet.storage.PlayerWalletStorage;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
-import me.cobbleBet.listeners.PluginUpdateListener;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
@@ -31,6 +30,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
@@ -101,6 +101,8 @@ public final class Main extends JavaPlugin {
     private volatile String officialPluginJarName = "CobbleBet.jar";
     private final AtomicBoolean updateDownloadRunning = new AtomicBoolean(false);
     private volatile String stagedPluginVersion = "";
+    private volatile String autoUpdateFailure = "";
+    private volatile String installedUpdateNoticeVersion = "";
 
     @Override
     public void onEnable() {
@@ -115,10 +117,11 @@ public final class Main extends JavaPlugin {
         economyManager = new EconomyManager(this);
         gamblingIndicatorManager = new GamblingIndicatorManager(this);
         registerCommands();
-        getServer().getPluginManager().registerEvents(new PluginUpdateListener(this), this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         connectSocket();
         startStatusUpdates();
+        prepareInstalledUpdateNotice();
+        startUpdateReminders();
 
         getLogger().info("CobbleBet loaded successfully.");
     }
@@ -249,15 +252,15 @@ public final class Main extends JavaPlugin {
     public void setOfficialPluginRelease(String version, String jarName) {
         if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
-        stagePluginUpdateIfNeeded();
-        Bukkit.getScheduler().runTask(this, () -> Bukkit.getOnlinePlayers().forEach(this::notifyAdminAboutPluginUpdate));
+        checkForPluginUpdate();
     }
 
-    private void stagePluginUpdateIfNeeded() {
+    public void checkForPluginUpdate() {
         String installedVersion = getDescription().getVersion();
         String latestVersion = officialPluginVersion;
         if (!autoUpdateEnabled || latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
         if (latestVersion.equals(stagedPluginVersion) || !updateDownloadRunning.compareAndSet(false, true)) return;
+        autoUpdateFailure = "";
 
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             File temporary = null;
@@ -270,13 +273,32 @@ public final class Main extends JavaPlugin {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(PLUGIN_DOWNLOAD_URL))
                         .timeout(Duration.ofSeconds(45)).header("User-Agent", "CobbleBet/" + installedVersion).build();
                 HttpResponse<InputStream> response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
-                if (response.statusCode() != 200) throw new IllegalStateException("download returned HTTP " + response.statusCode());
+                if (response.statusCode() != 200) {
+                    response.body().close();
+                    throw new IllegalStateException("download returned HTTP " + response.statusCode());
+                }
                 try (InputStream input = response.body()) {
                     Files.copy(input, temporary.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
                 if (temporary.length() < 1024 || temporary.length() > 50_000_000) throw new IllegalStateException("downloaded JAR size is invalid");
                 try (JarFile jar = new JarFile(temporary)) {
-                    if (jar.getJarEntry("plugin.yml") == null) throw new IllegalStateException("downloaded file is not a Bukkit plugin JAR");
+                    var descriptorEntry = jar.getJarEntry("plugin.yml");
+                    if (descriptorEntry == null) throw new IllegalStateException("downloaded file is not a Bukkit plugin JAR");
+                    String descriptor;
+                    try (InputStream descriptorInput = jar.getInputStream(descriptorEntry)) {
+                        descriptor = new String(descriptorInput.readAllBytes(), StandardCharsets.UTF_8);
+                    }
+                    if (!descriptor.matches("(?ms).*^\\s*name\\s*:\\s*['\"]?CobbleBet['\"]?\\s*$.*")) {
+                        throw new IllegalStateException("downloaded JAR is not the CobbleBet plugin");
+                    }
+                    String expectedVersion = java.util.regex.Pattern.quote(latestVersion);
+                    if (!descriptor.matches("(?ms).*^\\s*version\\s*:\\s*['\"]?" + expectedVersion + "['\"]?\\s*$.*")) {
+                        throw new IllegalStateException("downloaded JAR version does not match " + latestVersion);
+                    }
+                }
+                if (!autoUpdateEnabled) {
+                    getLogger().info("Automatic CobbleBet update was disabled before the download completed; the staged update was cancelled.");
+                    return;
                 }
                 File target = new File(updateFolder, getFile().getName());
                 try {
@@ -286,11 +308,14 @@ public final class Main extends JavaPlugin {
                 }
                 temporary = null;
                 stagedPluginVersion = latestVersion;
+                autoUpdateFailure = "";
                 getLogger().info("CobbleBet " + latestVersion + " downloaded to " + target + ". It will install on the next server restart.");
-                Bukkit.getScheduler().runTask(this, () -> Bukkit.getOnlinePlayers().stream()
-                        .filter(player -> player.hasPermission("cobblebet.admin"))
-                        .forEach(player -> player.sendMessage(Component.text("[CobbleBet] Update " + latestVersion + " is ready and will install on the next server restart.", NamedTextColor.GREEN))));
+                Bukkit.getScheduler().runTask(this, () -> {
+                    getConfig().set("updater.pendingVersion", latestVersion);
+                    saveConfig();
+                });
             } catch (Exception error) {
+                autoUpdateFailure = error.getMessage() == null ? "unknown download error" : error.getMessage();
                 getLogger().warning("Automatic CobbleBet update failed: " + error.getMessage());
             } finally {
                 if (temporary != null) try { Files.deleteIfExists(temporary.toPath()); } catch (Exception ignored) {}
@@ -299,16 +324,52 @@ public final class Main extends JavaPlugin {
         });
     }
 
-    public void resetPluginUpdateNotification(UUID playerId) {
-        if (playerId != null) notifiedUpdateVersions.remove(playerId);
+    public void applyAutoUpdateSetting() {
+        if (autoUpdateEnabled) {
+            checkForPluginUpdate();
+            return;
+        }
+        stagedPluginVersion = "";
+        getConfig().set("updater.pendingVersion", null);
+        try {
+            Files.deleteIfExists(new File(getServer().getUpdateFolderFile(), getFile().getName()).toPath());
+        } catch (Exception error) {
+            getLogger().warning("Could not remove the staged CobbleBet update: " + error.getMessage());
+        }
+        saveConfig();
+    }
+
+    private void prepareInstalledUpdateNotice() {
+        String pendingVersion = getConfig().getString("updater.pendingVersion", "").trim();
+        if (!pendingVersion.isBlank() && pendingVersion.equals(getDescription().getVersion())) {
+            installedUpdateNoticeVersion = pendingVersion;
+            getConfig().set("updater.pendingVersion", null);
+            saveConfig();
+        }
+    }
+
+    private void startUpdateReminders() {
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            notifiedUpdateVersions.entrySet().removeIf(entry -> entry.getValue().startsWith("needed:"));
+            Bukkit.getOnlinePlayers().forEach(this::notifyAdminAboutPluginUpdate);
+        }, 20L * 180L, 20L * 60L * 30L);
     }
 
     public void notifyAdminAboutPluginUpdate(Player player) {
         if (player == null || !player.isOnline() || !player.hasPermission("cobblebet.admin")) return;
         String installedVersion = getDescription().getVersion();
+        if (!installedUpdateNoticeVersion.isBlank()) {
+            String noticeKey = "installed:" + installedUpdateNoticeVersion;
+            if (noticeKey.equals(notifiedUpdateVersions.put(player.getUniqueId(), noticeKey))) return;
+            player.sendMessage(Component.text("[CobbleBet] ", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD)
+                    .append(Component.text("Automatically updated to " + installedUpdateNoticeVersion + ".", NamedTextColor.GREEN)));
+            return;
+        }
         String latestVersion = officialPluginVersion;
         if (latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
-        if (latestVersion.equals(notifiedUpdateVersions.put(player.getUniqueId(), latestVersion))) return;
+        if (autoUpdateEnabled && autoUpdateFailure.isBlank()) return;
+        String noticeKey = "needed:" + latestVersion;
+        if (noticeKey.equals(notifiedUpdateVersions.put(player.getUniqueId(), noticeKey))) return;
 
         Component download = Component.text("Download " + officialPluginJarName, NamedTextColor.LIGHT_PURPLE)
                 .decorate(TextDecoration.BOLD, TextDecoration.UNDERLINED)
@@ -322,7 +383,10 @@ public final class Main extends JavaPlugin {
                 .append(Component.text("  →  Latest ", NamedTextColor.GRAY))
                 .append(Component.text(latestVersion, NamedTextColor.GREEN)));
         player.sendMessage(Component.text("Click to update: ", NamedTextColor.GRAY).append(download));
-        player.sendMessage(Component.text("Replace the old JAR and restart your server.", NamedTextColor.DARK_GRAY));
+        String reason = autoUpdateEnabled
+                ? "Automatic update failed (" + autoUpdateFailure + "). Download the JAR manually and restart your server."
+                : "Automatic updates are disabled. Replace the old JAR and restart your server.";
+        player.sendMessage(Component.text(reason, NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.empty());
     }
 

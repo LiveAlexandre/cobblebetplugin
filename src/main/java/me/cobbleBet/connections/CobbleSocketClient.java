@@ -39,6 +39,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("currencyName", currencyName == null || currencyName.isBlank() ? "Coins" : currencyName);
         hello.addProperty("bigWinThreshold", Main.bigWinThreshold);
         hello.addProperty("broadcastingEnabled", Main.broadcastingEnabled && Main.broadcastEvents.getOrDefault("bigWin", false));
+        hello.addProperty("autoUpdateEnabled", Main.autoUpdateEnabled);
         hello.add("permissionRequirements", Main.getPermissionRequirements());
         hello.addProperty("supportsWebsiteSettings", true);
         hello.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());

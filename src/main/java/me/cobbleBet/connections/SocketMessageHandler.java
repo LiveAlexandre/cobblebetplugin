@@ -28,6 +28,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketSetEconomyListener("setEconomy", client));
         listeners.add(new SocketSetPermissionRequirementsListener("setPermissionRequirements", client));
         listeners.add(new SocketSetBroadcastSettingsListener("setBroadcastSettings", client));
+        listeners.add(new SocketSetAutoUpdateListener("setAutoUpdate", client));
         listeners.add(new SocketSetWebsiteSettingsListener("setWebsiteSettings", client));
         listeners.add(new SocketWebGamblingStatusListener("webGamblingStatus", client));
         listeners.add(new SocketApprovalAcceptedListener("approvalAccepted", client));
