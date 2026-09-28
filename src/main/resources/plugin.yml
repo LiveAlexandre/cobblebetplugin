@@ -17,6 +17,8 @@ commands:
   coinflip:
     aliases: [cf]
     description: Shows players how to open Coinflip.
+  plinko:
+    description: Shows players how to open Plinko.
   wallet:
   cobblebet:
 permissions:

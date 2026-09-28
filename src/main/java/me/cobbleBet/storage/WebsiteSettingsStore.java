@@ -16,7 +16,7 @@ public final class WebsiteSettingsStore {
     private static final String ROOT = "websiteCustomization";
     private static volatile JsonObject snapshot = new JsonObject();
     private static volatile boolean initialized;
-    private static final String[] GAMES = {"mines", "blackjack", "roulette", "coinflip"};
+    private static final String[] GAMES = {"mines", "blackjack", "roulette", "coinflip", "plinko"};
 
     private WebsiteSettingsStore() {}
 
@@ -33,7 +33,7 @@ public final class WebsiteSettingsStore {
         for (String game : GAMES) {
             enabled.addProperty(game, config.getBoolean(ROOT + ".enabledGames." + game, true));
             JsonObject rule = new JsonObject();
-            double defaultPercent = game.equals("mines") || game.equals("roulette") ? 3 : 0;
+            double defaultPercent = game.equals("mines") || game.equals("roulette") || game.equals("plinko") ? 3 : 0;
             double percent = config.getDouble(ROOT + ".gameRules." + game + ".percent", defaultPercent);
             rule.addProperty("percent", Double.isFinite(percent) ? Math.round(Math.max(0, Math.min(50, percent)) * 10) / 10.0 : defaultPercent);
             rules.add(game, rule);

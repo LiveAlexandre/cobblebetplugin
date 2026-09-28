@@ -338,6 +338,7 @@ public final class Main extends JavaPlugin {
         getCommand("blackjack").setExecutor(gameShortcut);
         getCommand("roulette").setExecutor(gameShortcut);
         getCommand("coinflip").setExecutor(gameShortcut);
+        getCommand("plinko").setExecutor(gameShortcut);
 
         WalletCommand wallet = new WalletCommand();
         getCommand("wallet").setExecutor(wallet);

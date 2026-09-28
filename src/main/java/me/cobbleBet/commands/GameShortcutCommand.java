@@ -20,6 +20,7 @@ public class GameShortcutCommand implements CommandExecutor {
             case "cf", "coinflip" -> "Coinflip";
             case "bj", "blackjack" -> "Blackjack";
             case "roulette" -> "Roulette";
+            case "plinko" -> "Plinko";
             default -> "Mines";
         };
 

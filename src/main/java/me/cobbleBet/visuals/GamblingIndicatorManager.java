@@ -160,6 +160,10 @@ public final class GamblingIndicatorManager {
     }
 
     public void showResult(UUID playerId, boolean won, double amount, String currency, double multiplier) {
+        showResult(playerId, won, amount, currency, multiplier, "");
+    }
+
+    public void showResult(UUID playerId, boolean won, double amount, String currency, double multiplier, String game) {
         if (!enabled || !Double.isFinite(amount) || amount < 0) return;
         Player player = Bukkit.getPlayer(playerId);
         if (player == null || !player.isOnline() || player.isDead()) return;
@@ -168,7 +172,7 @@ public final class GamblingIndicatorManager {
         // Plain text only. Keep holograms readable with custom currency names.
         currencyName = currencyName.replaceAll("[\\p{Cntrl}\\r\\n]", "").trim();
         if (currencyName.length() > 24) currencyName = currencyName.substring(0, 23) + "…";
-        Result result = new Result(won, amount, currencyName, multiplier);
+        Result result = new Result(won, amount, currencyName, multiplier, game);
         Indicator indicator = indicators.get(playerId);
         if (indicator != null && (!indicator.header.isValid() || !indicator.world.equals(player.getWorld().getUID()))) {
             clear(playerId);
@@ -376,7 +380,7 @@ public final class GamblingIndicatorManager {
         double rise = reducedMotion ? 0 : result.won ? easeOut(age / 40.0) * 0.23 : -smooth(age / (double) result.duration) * 0.16;
         Location anchor = anchor(player).add(0, rise, 0);
         int accent = result.won ? GOLD : ROSE;
-        String label = result.won ? result.tier == 2 ? "SPECTACULAR WIN" : result.tier == 1 ? "BIG WIN" : "WIN" : "ROUND LOST";
+        String label = result.won ? result.game.equals("plinko") ? "PLINKO WIN" : result.tier == 2 ? "SPECTACULAR WIN" : result.tier == 1 ? "BIG WIN" : "WIN" : result.game.equals("plinko") ? "PLINKO LANDED" : "ROUND LOST";
         double amount = reducedMotion ? result.amount : countedAmount(result.amount, age);
         String value = (result.won ? "" : "−") + compact(amount);
         indicator.header.text(gradient(label, accent, result.won ? CREAM : 0xC6A4C7, age * 0.04, true));
@@ -390,7 +394,8 @@ public final class GamblingIndicatorManager {
         double radius = reducedMotion ? 0.9 : result.won ? 0.82 + Math.sin(clamp(age / 36.0) * Math.PI) * 0.38 : 0.9 * (1 - smooth(age / 34.0));
         orbitCoins(indicator, anchor, age * (result.won ? 0.09 : -0.04), radius, 0.32 * reveal * alpha);
         if (!reducedMotion && age % 4 == 0) {
-            if (result.won) winParticles(player, indicator, result);
+            if (result.game.equals("plinko")) plinkoParticles(player, indicator, result);
+            else if (result.won) winParticles(player, indicator, result);
             else lossParticles(player, indicator, age);
         }
         if (age == 8) play(player, result.won ? Sound.BLOCK_NOTE_BLOCK_CHIME : Sound.BLOCK_NOTE_BLOCK_HARP, result.won ? 1.25f : 0.5f, 0.7f);
@@ -429,6 +434,24 @@ public final class GamblingIndicatorManager {
             double angle = age * 0.3;
             particle(indicator, Particle.END_ROD, feet.clone().add(Math.cos(angle) * 0.75, 2.3 + Math.sin(angle) * 0.3, Math.sin(angle) * 0.75), 1, 0, 0, 0, 0.01);
         }
+    }
+
+    private void plinkoParticles(Player player, Indicator indicator, Result result) {
+        int age = result.age;
+        if (age > 48) return;
+        Location base = player.getLocation().add(0, 0.15, 0);
+        int steps = Math.max(4, density);
+        for (int i = 0; i < steps; i++) {
+            double progress = i / (double) Math.max(1, steps - 1);
+            double y = 2.7 - progress * 2.35;
+            double sway = Math.sin(progress * Math.PI * 7 + age * 0.18) * (0.12 + progress * 0.42);
+            double forward = Math.cos(progress * Math.PI * 7 + age * 0.18) * (0.12 + progress * 0.42);
+            dust(indicator, base.clone().add(sway, y, forward), result.won ? GOLD : LILAC, i == steps - 1 ? 1.25f : 0.75f);
+        }
+        if (age % 8 == 0 && age <= 32) {
+            play(player, Sound.BLOCK_NOTE_BLOCK_HAT, 0.75f + age / 64f, 0.25f);
+        }
+        if (result.won && age == 36) particle(indicator, Particle.END_ROD, base.clone().add(0, 1.2, 0), density + 4, 0.7, 0.7, 0.7, 0.025);
     }
 
     private void lossParticles(Player player, Indicator indicator, int age) {
@@ -511,7 +534,7 @@ public final class GamblingIndicatorManager {
 
     private void showScreenResult(Player player, Result result) {
         if (!screenTitles) return;
-        String label = result.won ? result.tier == 2 ? "SPECTACULAR WIN" : result.tier == 1 ? "BIG WIN" : "WIN" : "ROUND LOST";
+        String label = result.won ? result.game.equals("plinko") ? "PLINKO WIN" : result.tier == 2 ? "SPECTACULAR WIN" : result.tier == 1 ? "BIG WIN" : "WIN" : result.game.equals("plinko") ? "PLINKO LANDED" : "ROUND LOST";
         Component title = gradient(label, result.won ? GOLD : ROSE, result.won ? CREAM : 0xC6A4C7, 0, true);
         Component subtitle = Component.text((result.won ? "Payout  " : "Stake lost  ") + compact(result.amount) + " " + result.currency, TextColor.color(result.won ? CREAM : MUTED));
         player.showTitle(Title.title(title, subtitle, Title.Times.times(Duration.ofMillis(180), Duration.ofMillis(result.duration * 50L - 650), Duration.ofMillis(470))));
@@ -561,14 +584,16 @@ public final class GamblingIndicatorManager {
         final double amount;
         final String currency;
         final double multiplier;
+        final String game;
         final int tier;
         final int duration;
         int age;
-        Result(boolean won, double amount, String currency, double multiplier) {
+        Result(boolean won, double amount, String currency, double multiplier, String game) {
             this.won = won;
             this.amount = amount;
             this.currency = currency;
             this.multiplier = Double.isFinite(multiplier) && multiplier > 0 ? multiplier : 0;
+            this.game = game == null ? "" : game;
             this.tier = tier(won, this.multiplier);
             this.duration = duration(won, tier);
         }

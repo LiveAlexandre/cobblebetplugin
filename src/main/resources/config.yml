@@ -126,6 +126,7 @@ websiteCustomization:
     blackjack: true
     roulette: true
     coinflip: true
+    plinko: true
   gameRules:
     mines:
       percent: 3.0
@@ -135,6 +136,8 @@ websiteCustomization:
       percent: 3.0
     coinflip:
       percent: 0.0
+    plinko:
+      percent: 3.0
   background:
     image: ""
     blur: 8
