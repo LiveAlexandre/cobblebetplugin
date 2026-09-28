@@ -60,6 +60,7 @@ public final class Main extends JavaPlugin {
     public static String cobblebetToken;
     public static boolean premiumEnabled;
     public static String serverDisplayName;
+    public static String serverId;
 
     // =========================
     // BROADCAST
@@ -94,6 +95,7 @@ public final class Main extends JavaPlugin {
         instance = this;
 
         saveDefaultConfig();
+        ensureServerId();
         loadConfigValues();
         me.cobbleBet.storage.WebsiteSettingsStore.load(this);
 
@@ -150,6 +152,7 @@ public final class Main extends JavaPlugin {
         // PREMIUM
         cobblebetToken = Main.getInstance().getConfig().getString("cobblebetToken", "");
         serverDisplayName = Main.getInstance().getConfig().getString("serverName", "").trim();
+        serverId = Main.getInstance().getConfig().getString("serverId", "").trim();
         premiumEnabled = Main.getInstance().getConfig().getBoolean("premiumEnabled", false);
 
         // BROADCAST SETTINGS
@@ -197,6 +200,19 @@ public final class Main extends JavaPlugin {
         Bukkit.getLogger().info("Broadcasting: " + broadcastingEnabled);
         Bukkit.getLogger().info("Broadcast Events: " + broadcastEvents);
         Bukkit.getLogger().info("Test Mode: " + testMode);
+    }
+
+    private void ensureServerId() {
+        String configured = getConfig().getString("serverId", "").trim();
+        try {
+            UUID.fromString(configured);
+        } catch (IllegalArgumentException ignored) {
+            configured = UUID.randomUUID().toString();
+            getConfig().set("serverId", configured);
+            saveConfig();
+            getLogger().info("Created this server's permanent CobbleBet ID.");
+        }
+        serverId = configured;
     }
 
     // =========================
