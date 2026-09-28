@@ -33,7 +33,7 @@ public final class WebsiteSettingsStore {
         for (String game : GAMES) {
             enabled.addProperty(game, config.getBoolean(ROOT + ".enabledGames." + game, true));
             JsonObject rule = new JsonObject();
-            double defaultPercent = game.equals("mines") || game.equals("roulette") || game.equals("plinko") ? 3 : 0;
+            double defaultPercent = 0;
             double percent = config.getDouble(ROOT + ".gameRules." + game + ".percent", defaultPercent);
             rule.addProperty("percent", Double.isFinite(percent) ? Math.round(Math.max(0, Math.min(50, percent)) * 10) / 10.0 : defaultPercent);
             rules.add(game, rule);

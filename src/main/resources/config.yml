@@ -129,15 +129,15 @@ websiteCustomization:
     plinko: true
   gameRules:
     mines:
-      percent: 3.0
+      percent: 0.0
     blackjack:
       percent: 0.0
     roulette:
-      percent: 3.0
+      percent: 0.0
     coinflip:
       percent: 0.0
     plinko:
-      percent: 3.0
+      percent: 0.0
   background:
     image: ""
     blur: 8
