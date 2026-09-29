@@ -21,6 +21,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketTokenResponseListener("tokenResponse", client));
         listeners.add(new SocketRequestBalanceListener("requestBalance", client));
         listeners.add(new SocketUpdateBalanceListener("updateBalance", client));
+        listeners.add(new SocketDepositRequestListener("requestDeposit", client));
         listeners.add(new SocketRequestBroadcastListener("requestBroadcast", client));
         listeners.add(new SocketAdminPanelResponseListener("adminPanelResponse", client));
         listeners.add(new SocketGambleResultListener("gambleResult", client));

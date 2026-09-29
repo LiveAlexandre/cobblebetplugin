@@ -131,6 +131,8 @@ websiteCustomization:
     roulette: true
     coinflip: true
     plinko: true
+    dice: true
+    crash: true
   gameRules:
     mines:
       percent: 0.0
@@ -142,9 +144,20 @@ websiteCustomization:
       percent: 0.0
     plinko:
       percent: 0.0
+    dice:
+      percent: 0.0
+    crash:
+      percent: 0.0
   background:
     image: ""
     blur: 8
   maintenance:
     enabled: false
     message: "Games are temporarily unavailable while this server completes maintenance."
+  ownerAlerts:
+    connection: true
+    economy: true
+    transactions: true
+    updates: true
+    unusualActivity: true
+    maintenance: true

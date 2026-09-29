@@ -19,6 +19,10 @@ commands:
     description: Shows players how to open Coinflip.
   plinko:
     description: Shows players how to open Plinko.
+  dice:
+    description: Shows players how to open Dice.
+  crash:
+    description: Shows players how to open Crash.
   wallet:
   cobblebet:
 permissions:

@@ -3,6 +3,7 @@ package me.cobbleBet.economy;
 import me.cobbleBet.Main;
 import me.cobbleBet.players.PlayerWallet;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -160,7 +161,7 @@ public class EconomyManager {
 
     public boolean deposit(Player player, double amount) {
 
-        if (amount <= 0)
+        if (amount <= 0 || getBalance(player) + amount > Main.maximumBalance)
             return false;
 
         PlayerWallet wallet = wallet(player);
@@ -173,13 +174,15 @@ public class EconomyManager {
             if (!vaultEconomy.has(player, amount))
                 return false;
 
-            vaultEconomy.withdrawPlayer(player, amount);
+            EconomyResponse response = vaultEconomy.withdrawPlayer(player, amount);
+            if (!response.transactionSuccess()) return false;
 
             wallet.addCurrency(amount);
             sendBalanceToServer(player, wallet.getBalance());
             return true;
         }
 
+        if (amount != Math.floor(amount)) return false;
         int itemAmount = (int) amount;
 
         if (!removeFromInventory(player, Main.economyItem, itemAmount))
@@ -187,6 +190,26 @@ public class EconomyManager {
 
         wallet.addCurrency(itemAmount);
         sendBalanceToServer(player, wallet.getBalance());
+        return true;
+    }
+
+    public boolean depositFromEnderChest(Player player, double amount) {
+        if (!Main.economyType.equalsIgnoreCase("item") || amount <= 0 || amount != Math.floor(amount) || getBalance(player) + amount > Main.maximumBalance) return false;
+        int needed = (int) amount;
+        ItemStack[] contents = player.getEnderChest().getContents();
+        int total = 0;
+        for (ItemStack item : contents) if (item != null && item.getType() == Main.economyItem) total += item.getAmount();
+        if (total < needed) return false;
+        int remaining = needed;
+        for (int slot = 0; slot < contents.length && remaining > 0; slot++) {
+            ItemStack item = contents[slot];
+            if (item == null || item.getType() != Main.economyItem) continue;
+            int taken = Math.min(item.getAmount(), remaining);
+            item.setAmount(item.getAmount() - taken); remaining -= taken;
+            if (item.getAmount() <= 0) contents[slot] = null;
+        }
+        player.getEnderChest().setContents(contents);
+        PlayerWallet wallet = wallet(player); wallet.addCurrency(needed); sendBalanceToServer(player, wallet.getBalance());
         return true;
     }
 
@@ -216,6 +239,7 @@ public class EconomyManager {
             return true;
         }
 
+        if (amount != Math.floor(amount)) return false;
         int itemAmount = (int) amount;
 
         wallet.removeCurrency(itemAmount);

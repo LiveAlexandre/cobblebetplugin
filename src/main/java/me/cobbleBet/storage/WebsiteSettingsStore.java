@@ -16,7 +16,7 @@ public final class WebsiteSettingsStore {
     private static final String ROOT = "websiteCustomization";
     private static volatile JsonObject snapshot = new JsonObject();
     private static volatile boolean initialized;
-    private static final String[] GAMES = {"mines", "blackjack", "roulette", "coinflip", "plinko"};
+    private static final String[] GAMES = {"mines", "blackjack", "roulette", "coinflip", "plinko", "dice", "crash"};
 
     private WebsiteSettingsStore() {}
 
@@ -25,7 +25,7 @@ public final class WebsiteSettingsStore {
         initialized = config.getBoolean(ROOT + ".initialized", false);
         JsonObject settings = new JsonObject();
         String theme = config.getString(ROOT + ".theme", "classic");
-        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking", "ember").contains(theme) ? theme : "classic");
+        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking", "ember", "harbor").contains(theme) ? theme : "classic");
         String message = config.getString(ROOT + ".playerMessage", "");
         settings.addProperty("playerMessage", message.substring(0, Math.min(160, message.length())));
         JsonObject enabled = new JsonObject();
@@ -50,6 +50,7 @@ public final class WebsiteSettingsStore {
         String maintenanceMessage = config.getString(ROOT + ".maintenance.message", "Games are temporarily unavailable while this server completes maintenance.");
         maintenance.addProperty("message", maintenanceMessage.substring(0, Math.min(180, maintenanceMessage.length())));
         settings.add("maintenance", maintenance);
+        JsonObject alerts=new JsonObject();for(String key:new String[]{"connection","economy","transactions","updates","unusualActivity","maintenance"})alerts.addProperty(key,config.getBoolean(ROOT+".ownerAlerts."+key,true));settings.add("ownerAlerts",alerts);
         snapshot = settings;
     }
 
@@ -71,6 +72,7 @@ public final class WebsiteSettingsStore {
         config.set(ROOT + ".background.blur", settings.getAsJsonObject("background").get("blur").getAsInt());
         config.set(ROOT + ".maintenance.enabled", settings.getAsJsonObject("maintenance").get("enabled").getAsBoolean());
         config.set(ROOT + ".maintenance.message", settings.getAsJsonObject("maintenance").get("message").getAsString());
+        for(String key:new String[]{"connection","economy","transactions","updates","unusualActivity","maintenance"})config.set(ROOT+".ownerAlerts."+key,settings.getAsJsonObject("ownerAlerts").get(key).getAsBoolean());
         config.setComments(ROOT, java.util.List.of("", "WEBSITE CUSTOMIZATION — managed in the CobbleBet owner panel", "Keep this section at the bottom. New game settings apply to new bets.", "Background images are resized data URLs, stored here to survive restarts."));
         try {
             saveConfirmed(plugin);
@@ -111,7 +113,7 @@ public final class WebsiteSettingsStore {
     }
 
     private static void validate(JsonObject settings) {
-        if (!Set.of("classic", "pink", "cat", "viking", "ember").contains(settings.get("theme").getAsString())
+        if (!Set.of("classic", "pink", "cat", "viking", "ember", "harbor").contains(settings.get("theme").getAsString())
                 || settings.get("playerMessage").getAsString().length() > 160) throw new IllegalArgumentException("Invalid theme or message.");
         for (String game : GAMES) {
             double percent = settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("percent").getAsDouble();
@@ -124,6 +126,7 @@ public final class WebsiteSettingsStore {
         JsonObject maintenance = settings.getAsJsonObject("maintenance");
         if (maintenance == null || !maintenance.get("enabled").getAsJsonPrimitive().isBoolean()
                 || maintenance.get("message").getAsString().length() > 180) throw new IllegalArgumentException("Invalid maintenance settings.");
+        if(settings.getAsJsonObject("ownerAlerts")==null)throw new IllegalArgumentException("Invalid owner alert settings.");
     }
 
     private static boolean validImage(String value) {

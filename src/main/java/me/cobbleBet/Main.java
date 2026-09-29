@@ -99,6 +99,9 @@ public final class Main extends JavaPlugin {
     public CobbleSocketClient cobbleSocketClient;
     public final ConcurrentHashMap<UUID, Long> pendingAdminPanelRequests = new ConcurrentHashMap<>();
     public GamblingIndicatorManager gamblingIndicatorManager;
+    public me.cobbleBet.gui.CobbleMenuController menuController;
+    private final long startedAt = System.currentTimeMillis();
+    private volatile long lastStatusAt;
     private volatile String officialPluginVersion = "";
     private volatile String officialPluginJarName = "CobbleBet.jar";
     private volatile String officialPluginSha256 = "";
@@ -119,7 +122,9 @@ public final class Main extends JavaPlugin {
         loadStorage();
         economyManager = new EconomyManager(this);
         gamblingIndicatorManager = new GamblingIndicatorManager(this);
+        menuController = new me.cobbleBet.gui.CobbleMenuController(this);
         registerCommands();
+        getServer().getPluginManager().registerEvents(menuController, this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         connectSocket();
         startStatusUpdates();
@@ -427,6 +432,12 @@ public final class Main extends JavaPlugin {
         status.addProperty("serverName", serverDisplayName == null || serverDisplayName.isBlank() ? Bukkit.getMotd() : serverDisplayName);
         status.addProperty("pluginName", "CobbleBet");
         status.addProperty("pluginVersion", getDescription().getVersion());
+        status.addProperty("protocolVersion", 2);
+        status.addProperty("serverUptimeMillis", System.currentTimeMillis() - startedAt);
+        status.addProperty("tps", Math.min(20.0, Bukkit.getTPS()[0]));
+        Runtime runtime = Runtime.getRuntime();
+        status.addProperty("memoryUsedMb", (runtime.totalMemory() - runtime.freeMemory()) / 1048576.0);
+        status.addProperty("memoryMaxMb", runtime.maxMemory() / 1048576.0);
         status.addProperty("autoUpdateEnabled", autoUpdateEnabled);
         status.addProperty("economyType", economyType);
         status.addProperty("economyItem", economyItem == null ? "" : economyItem.name());
@@ -443,6 +454,7 @@ public final class Main extends JavaPlugin {
         }
         status.add("onlinePlayers", players);
         cobbleSocketClient.send(status.toString());
+        lastStatusAt = System.currentTimeMillis();
     }
 
     public String readServerIconDataUrl() {
@@ -473,6 +485,8 @@ public final class Main extends JavaPlugin {
         getCommand("roulette").setExecutor(gameShortcut);
         getCommand("coinflip").setExecutor(gameShortcut);
         getCommand("plinko").setExecutor(gameShortcut);
+        getCommand("dice").setExecutor(gameShortcut);
+        getCommand("crash").setExecutor(gameShortcut);
 
         WalletCommand wallet = new WalletCommand();
         getCommand("wallet").setExecutor(wallet);
@@ -513,4 +527,6 @@ public final class Main extends JavaPlugin {
     public EconomyManager getEconomyManager() {
         return economyManager;
     }
+    public long getStartedAt() { return startedAt; }
+    public long getLastStatusAt() { return lastStatusAt; }
 }

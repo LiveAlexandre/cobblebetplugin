@@ -31,7 +31,7 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            sendBalance(player);
+            Main.getInstance().menuController.openWallet(player);
             return true;
         }
 
@@ -200,13 +200,13 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
     // =========================
     private void sendHelp(Player player) {
 
-        player.sendMessage(mm.deserialize(
-                "<gradient:#00ffcc:#0066ff><bold>Wallet Help</bold></gradient>\n" +
-                        "<gray>/wallet</gray> View balance\n" +
-                        "<gray>/wallet deposit <amount></gray>\n" +
-                        "<gray>/wallet withdraw <amount></gray>\n" +
-                        "<gray>/wallet set <player> <amount></gray> <red>(Admin)</red>"
-        ));
+        String help = "<gradient:#00ffcc:#0066ff><bold>Wallet Help</bold></gradient>\n"
+                + "<gray>/wallet</gray> Open your wallet\n"
+                + "<gray>/wallet deposit <amount></gray>\n"
+                + "<gray>/wallet withdraw <amount></gray>";
+        if (!Main.isPermissionRequired("walletAdmin") || player.hasPermission("cobblebet.wallet.admin"))
+            help += "\n<gray>/wallet set <player> <amount></gray> <red>(Admin)</red>";
+        player.sendMessage(mm.deserialize(help));
     }
 
     // =========================
@@ -246,7 +246,9 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 
         if (args.length == 1) {
-            return List.of("balance", "deposit", "withdraw", "set", "help");
+            List<String> options = new ArrayList<>(List.of("balance", "deposit", "withdraw", "help"));
+            if (!Main.isPermissionRequired("walletAdmin") || sender.hasPermission("cobblebet.wallet.admin")) options.add("set");
+            return options;
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("set")) {

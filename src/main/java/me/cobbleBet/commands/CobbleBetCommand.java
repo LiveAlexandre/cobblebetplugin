@@ -24,8 +24,20 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§eUsage: /cobblebet <reload|panel|key <approval-key>>");
+            if (sender instanceof Player player) Main.getInstance().menuController.openDashboard(player);
+            else sender.sendMessage("§eUsage: /cobblebet <stats|settings|panel|reload|key <approval-key>>");
             return true;
+        }
+
+        if (args[0].equalsIgnoreCase("stats") || args[0].equalsIgnoreCase("health")) {
+            if (!(sender instanceof Player player)) { sender.sendMessage("§cThis menu is available in-game."); return true; }
+            if (args[0].equalsIgnoreCase("health")) Main.getInstance().menuController.openHealth(player);
+            else Main.getInstance().menuController.openStats(player);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("settings") || args[0].equalsIgnoreCase("gui")) {
+            if (!(sender instanceof Player player)) { sender.sendMessage("§cThis menu is available in-game."); return true; }
+            Main.getInstance().menuController.openDashboard(player); return true;
         }
 
         if (args[0].equalsIgnoreCase("panel") || args[0].equalsIgnoreCase("link")) {
@@ -118,6 +130,7 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             completions.add("reload");
+            completions.add("stats"); completions.add("health"); completions.add("settings");
             completions.add("panel");
             completions.add("key");
         }
