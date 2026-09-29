@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.google.gson.JsonObject;
 
 public class WalletCommand implements CommandExecutor, TabCompleter {
 
@@ -41,12 +42,44 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
             case "balance", "bal" -> sendBalance(player);
             case "withdraw" -> handleWithdraw(player, args);
             case "deposit" -> handleDeposit(player, args);
+            case "link" -> requestLinkCode(player);
             case "set" -> handleSet(player, args);
 
             default -> player.sendMessage(error("Unknown subcommand. Use /wallet help"));
         }
 
         return true;
+    }
+
+    private void requestLinkCode(Player player) {
+        Main plugin = Main.getInstance();
+        if (plugin.cobbleSocketClient == null || !plugin.cobbleSocketClient.isApproved()) {
+            player.sendMessage(error("CobbleBet is reconnecting. Try again in a moment."));
+            return;
+        }
+        Long pendingUntil = plugin.pendingAccountLinkRequests.get(player.getUniqueId());
+        if (pendingUntil != null && pendingUntil > System.currentTimeMillis()) {
+            player.sendMessage(mm.deserialize("<gray>Your link code is already being requested…</gray>"));
+            return;
+        }
+        JsonObject request = new JsonObject();
+        request.addProperty("type", "requestAccountLinkCode");
+        request.addProperty("playerUUID", player.getUniqueId().toString());
+        request.addProperty("playerName", player.getName());
+        long deadline = System.currentTimeMillis() + 8_000;
+        plugin.pendingAccountLinkRequests.put(player.getUniqueId(), deadline);
+        try {
+            plugin.cobbleSocketClient.send(request.toString());
+            player.sendMessage(mm.deserialize("<gray>Creating your secure account link code…</gray>"));
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!plugin.pendingAccountLinkRequests.remove(player.getUniqueId(), deadline)) return;
+                plugin.getLogger().warning("The CobbleBet account-link service did not answer /wallet link for " + player.getName() + ". Ensure the website backend is running the matching release.");
+                if (player.isOnline()) player.sendMessage(error("Account linking is temporarily unavailable. Please try again later."));
+            }, 20L * 8);
+        } catch (RuntimeException error) {
+            plugin.pendingAccountLinkRequests.remove(player.getUniqueId(), deadline);
+            player.sendMessage(error("The link request could not be sent. Try again in a moment."));
+        }
     }
 
     // =========================
@@ -203,7 +236,8 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
         String help = "<gradient:#00ffcc:#0066ff><bold>Wallet Help</bold></gradient>\n"
                 + "<gray>/wallet</gray> Open your wallet\n"
                 + "<gray>/wallet deposit <amount></gray>\n"
-                + "<gray>/wallet withdraw <amount></gray>";
+                + "<gray>/wallet withdraw <amount></gray>\n"
+                + "<gray>/wallet link</gray> <dark_gray>Link this server to your CobbleBet account</dark_gray>";
         if (!Main.isPermissionRequired("walletAdmin") || player.hasPermission("cobblebet.wallet.admin"))
             help += "\n<gray>/wallet set <player> <amount></gray> <red>(Admin)</red>";
         player.sendMessage(mm.deserialize(help));
@@ -246,7 +280,7 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 
         if (args.length == 1) {
-            List<String> options = new ArrayList<>(List.of("balance", "deposit", "withdraw", "help"));
+            List<String> options = new ArrayList<>(List.of("balance", "deposit", "withdraw", "link", "help"));
             if (!Main.isPermissionRequired("walletAdmin") || sender.hasPermission("cobblebet.wallet.admin")) options.add("set");
             return options;
         }

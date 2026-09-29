@@ -98,6 +98,7 @@ public final class Main extends JavaPlugin {
     private EconomyManager economyManager;
     public CobbleSocketClient cobbleSocketClient;
     public final ConcurrentHashMap<UUID, Long> pendingAdminPanelRequests = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<UUID, Long> pendingAccountLinkRequests = new ConcurrentHashMap<>();
     public GamblingIndicatorManager gamblingIndicatorManager;
     public me.cobbleBet.gui.CobbleMenuController menuController;
     private final long startedAt = System.currentTimeMillis();

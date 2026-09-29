@@ -49,7 +49,7 @@ public class SocketTokenResponseListener extends SocketMessageListener {
         link.append(token);
 
         Component message = Component.text(link.toString(), NamedTextColor.YELLOW)
-                .hoverEvent(HoverEvent.showText(Component.text("DO NOT SHARE THIS LINK AS IT COwNTAINS YOUR PRIVATE TOKEN", NamedTextColor.RED)))
+                .hoverEvent(HoverEvent.showText(Component.text("Private one-use link. Do not share it.", NamedTextColor.RED)))
                 .clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, link.toString()));
         return message;
     }

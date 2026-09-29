@@ -147,6 +147,11 @@ public final class GamblingIndicatorManager {
         cancelIdleCheck(id);
     }
 
+    public int getActiveWebPlayerCount() {
+        long now = System.currentTimeMillis();
+        return (int) webPages.entrySet().stream().filter(entry -> entry.getValue() > now).count();
+    }
+
     public void onPlayerTeleport(Player player) {
         clear(player.getUniqueId());
         if (webPages.containsKey(player.getUniqueId())) {

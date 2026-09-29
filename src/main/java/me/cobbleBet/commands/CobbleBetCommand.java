@@ -18,6 +18,21 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
+        if (args.length >= 2 && args[0].equalsIgnoreCase("menu")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("§cThis menu is available in-game.");
+                return true;
+            }
+            String action = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+            boolean walletAction = Main.getInstance().menuController.isWalletDialogAction(action);
+            if (!walletAction && Main.isPermissionRequired("admin") && !sender.hasPermission("cobblebet.admin")) {
+                sender.sendMessage("§cYou don't have permission to use the owner menus.");
+                return true;
+            }
+            Main.getInstance().menuController.handleDialogAction(player, action);
+            return true;
+        }
+
         if (Main.isPermissionRequired("admin") && !sender.hasPermission("cobblebet.admin")) {
             sender.sendMessage("§cYou don't have permission to use this command.");
             return true;

@@ -19,6 +19,7 @@ public class SocketMessageHandler {
 
     public SocketMessageHandler(CobbleSocketClient client) {
         listeners.add(new SocketTokenResponseListener("tokenResponse", client));
+        listeners.add(new SocketAccountLinkCodeListener("accountLinkCode", client));
         listeners.add(new SocketRequestBalanceListener("requestBalance", client));
         listeners.add(new SocketUpdateBalanceListener("updateBalance", client));
         listeners.add(new SocketDepositRequestListener("requestDeposit", client));

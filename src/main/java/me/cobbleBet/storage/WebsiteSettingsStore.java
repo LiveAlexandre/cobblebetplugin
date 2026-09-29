@@ -25,7 +25,7 @@ public final class WebsiteSettingsStore {
         initialized = config.getBoolean(ROOT + ".initialized", false);
         JsonObject settings = new JsonObject();
         String theme = config.getString(ROOT + ".theme", "classic");
-        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking", "ember", "harbor").contains(theme) ? theme : "classic");
+        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking", "ember", "harbor", "starlight").contains(theme) ? theme : "classic");
         String message = config.getString(ROOT + ".playerMessage", "");
         settings.addProperty("playerMessage", message.substring(0, Math.min(160, message.length())));
         JsonObject enabled = new JsonObject();
@@ -113,7 +113,7 @@ public final class WebsiteSettingsStore {
     }
 
     private static void validate(JsonObject settings) {
-        if (!Set.of("classic", "pink", "cat", "viking", "ember", "harbor").contains(settings.get("theme").getAsString())
+        if (!Set.of("classic", "pink", "cat", "viking", "ember", "harbor", "starlight").contains(settings.get("theme").getAsString())
                 || settings.get("playerMessage").getAsString().length() > 160) throw new IllegalArgumentException("Invalid theme or message.");
         for (String game : GAMES) {
             double percent = settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("percent").getAsDouble();
