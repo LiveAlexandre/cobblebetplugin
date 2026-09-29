@@ -11,7 +11,8 @@ public class SocketApprovalAcceptedListener extends SocketMessageListener {
         me.cobbleBet.Main plugin = me.cobbleBet.Main.getInstance();
         String version = json.has("latestPluginVersion") ? json.get("latestPluginVersion").getAsString() : "";
         String jarName = json.has("pluginJarName") ? json.get("pluginJarName").getAsString() : "";
-        plugin.setOfficialPluginRelease(version, jarName);
+        String sha256 = json.has("pluginSha256") ? json.get("pluginSha256").getAsString() : "";
+        plugin.setOfficialPluginRelease(version, jarName, sha256);
         client.markApproved();
         Bukkit.getScheduler().runTask(plugin, plugin::sendServerStatus);
     }

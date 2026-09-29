@@ -38,6 +38,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarFile;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 public final class Main extends JavaPlugin {
 
@@ -99,6 +101,7 @@ public final class Main extends JavaPlugin {
     public GamblingIndicatorManager gamblingIndicatorManager;
     private volatile String officialPluginVersion = "";
     private volatile String officialPluginJarName = "CobbleBet.jar";
+    private volatile String officialPluginSha256 = "";
     private final AtomicBoolean updateDownloadRunning = new AtomicBoolean(false);
     private volatile String stagedPluginVersion = "";
     private volatile String autoUpdateFailure = "";
@@ -249,9 +252,10 @@ public final class Main extends JavaPlugin {
         connectSocket();
     }
 
-    public void setOfficialPluginRelease(String version, String jarName) {
+    public void setOfficialPluginRelease(String version, String jarName, String sha256) {
         if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
+        if (sha256 != null && sha256.matches("[a-fA-F0-9]{64}")) officialPluginSha256 = sha256.toLowerCase();
         checkForPluginUpdate();
     }
 
@@ -281,6 +285,10 @@ public final class Main extends JavaPlugin {
                     Files.copy(input, temporary.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
                 if (temporary.length() < 1024 || temporary.length() > 50_000_000) throw new IllegalStateException("downloaded JAR size is invalid");
+                if (!officialPluginSha256.isBlank()) {
+                    String actualHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(temporary.toPath())));
+                    if (!actualHash.equalsIgnoreCase(officialPluginSha256)) throw new IllegalStateException("downloaded JAR checksum does not match the published release");
+                }
                 try (JarFile jar = new JarFile(temporary)) {
                     var descriptorEntry = jar.getJarEntry("plugin.yml");
                     if (descriptorEntry == null) throw new IllegalStateException("downloaded file is not a Bukkit plugin JAR");

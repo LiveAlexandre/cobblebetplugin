@@ -145,3 +145,6 @@ websiteCustomization:
   background:
     image: ""
     blur: 8
+  maintenance:
+    enabled: false
+    message: "Games are temporarily unavailable while this server completes maintenance."

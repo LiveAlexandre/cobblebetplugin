@@ -14,6 +14,7 @@ public final class SocketPluginReleaseListener extends SocketMessageListener {
     public void trigger(JsonObject json) {
         String version = json.has("latestPluginVersion") ? json.get("latestPluginVersion").getAsString() : "";
         String jarName = json.has("pluginJarName") ? json.get("pluginJarName").getAsString() : "";
-        Main.getInstance().setOfficialPluginRelease(version, jarName);
+        String sha256 = json.has("pluginSha256") ? json.get("pluginSha256").getAsString() : "";
+        Main.getInstance().setOfficialPluginRelease(version, jarName, sha256);
     }
 }

@@ -32,6 +32,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("serverId", Main.serverId);
         hello.addProperty("serverName", Main.serverDisplayName == null || Main.serverDisplayName.isBlank() ? Bukkit.getMotd() : Main.serverDisplayName);
         hello.addProperty("pluginName", "CobbleBet");
+        hello.addProperty("platform", "Minecraft");
         hello.addProperty("pluginVersion", Main.getInstance().getDescription().getVersion());
         hello.addProperty("economyType", Main.economyType);
         hello.addProperty("economyItem", Main.economyItem == null ? "" : Main.economyItem.name());
@@ -42,6 +43,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("autoUpdateEnabled", Main.autoUpdateEnabled);
         hello.add("permissionRequirements", Main.getPermissionRequirements());
         hello.addProperty("supportsWebsiteSettings", true);
+        hello.addProperty("supportsBalanceTransactions", true);
         hello.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());
         hello.add("websiteSettings", me.cobbleBet.storage.WebsiteSettingsStore.getSettings());
         String icon = Main.getInstance().readServerIconDataUrl();

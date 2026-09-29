@@ -25,7 +25,7 @@ public final class WebsiteSettingsStore {
         initialized = config.getBoolean(ROOT + ".initialized", false);
         JsonObject settings = new JsonObject();
         String theme = config.getString(ROOT + ".theme", "classic");
-        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking").contains(theme) ? theme : "classic");
+        settings.addProperty("theme", Set.of("classic", "pink", "cat", "viking", "ember").contains(theme) ? theme : "classic");
         String message = config.getString(ROOT + ".playerMessage", "");
         settings.addProperty("playerMessage", message.substring(0, Math.min(160, message.length())));
         JsonObject enabled = new JsonObject();
@@ -45,6 +45,11 @@ public final class WebsiteSettingsStore {
         background.addProperty("image", validImage(image) ? image : "");
         background.addProperty("blur", Math.max(0, Math.min(30, config.getInt(ROOT + ".background.blur", 8))));
         settings.add("background", background);
+        JsonObject maintenance = new JsonObject();
+        maintenance.addProperty("enabled", config.getBoolean(ROOT + ".maintenance.enabled", false));
+        String maintenanceMessage = config.getString(ROOT + ".maintenance.message", "Games are temporarily unavailable while this server completes maintenance.");
+        maintenance.addProperty("message", maintenanceMessage.substring(0, Math.min(180, maintenanceMessage.length())));
+        settings.add("maintenance", maintenance);
         snapshot = settings;
     }
 
@@ -64,6 +69,8 @@ public final class WebsiteSettingsStore {
         }
         config.set(ROOT + ".background.image", settings.getAsJsonObject("background").get("image").getAsString());
         config.set(ROOT + ".background.blur", settings.getAsJsonObject("background").get("blur").getAsInt());
+        config.set(ROOT + ".maintenance.enabled", settings.getAsJsonObject("maintenance").get("enabled").getAsBoolean());
+        config.set(ROOT + ".maintenance.message", settings.getAsJsonObject("maintenance").get("message").getAsString());
         config.setComments(ROOT, java.util.List.of("", "WEBSITE CUSTOMIZATION — managed in the CobbleBet owner panel", "Keep this section at the bottom. New game settings apply to new bets.", "Background images are resized data URLs, stored here to survive restarts."));
         try {
             saveConfirmed(plugin);
@@ -104,7 +111,7 @@ public final class WebsiteSettingsStore {
     }
 
     private static void validate(JsonObject settings) {
-        if (!Set.of("classic", "pink", "cat", "viking").contains(settings.get("theme").getAsString())
+        if (!Set.of("classic", "pink", "cat", "viking", "ember").contains(settings.get("theme").getAsString())
                 || settings.get("playerMessage").getAsString().length() > 160) throw new IllegalArgumentException("Invalid theme or message.");
         for (String game : GAMES) {
             double percent = settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("percent").getAsDouble();
@@ -114,6 +121,9 @@ public final class WebsiteSettingsStore {
         JsonObject background = settings.getAsJsonObject("background");
         double blur = background.get("blur").getAsDouble();
         if (!validImage(background.get("image").getAsString()) || !Double.isFinite(blur) || blur < 0 || blur > 30) throw new IllegalArgumentException("Invalid background.");
+        JsonObject maintenance = settings.getAsJsonObject("maintenance");
+        if (maintenance == null || !maintenance.get("enabled").getAsJsonPrimitive().isBoolean()
+                || maintenance.get("message").getAsString().length() > 180) throw new IllegalArgumentException("Invalid maintenance settings.");
     }
 
     private static boolean validImage(String value) {
