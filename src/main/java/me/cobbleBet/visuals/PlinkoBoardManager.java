@@ -58,21 +58,15 @@ public final class PlinkoBoardManager implements Listener {
 
     private void spawn(Board board) {
         World world = board.location.getWorld(); if (world == null) return; float face = board.location.getYaw() + 180; List<Entity> entities = new ArrayList<>();
-        entities.add(block(board, point(board.location, 0, 2.75, 0), face, board.style.back, 4.7f, 5.45f, .18f));
-        entities.add(block(board, point(board.location, 0, 5.48, .02), face, board.style.frame, 4.95f, .18f, .34f));
-        entities.add(block(board, point(board.location, 0, .02, .02), face, board.style.frame, 4.95f, .18f, .34f));
-        for (double side : new double[]{-2.38, 2.38}) entities.add(block(board, point(board.location, side, 2.75, .02), face, board.style.frame, .18f, 5.55f, .34f));
-        for (double side : new double[]{-2.13, 2.13}) entities.add(block(board, point(board.location, side, 2.80, .18), face, board.style.peg, .055f, 4.82f, .12f));
-        entities.add(block(board, point(board.location, 0, .48, .19), face, board.style.frame, 4.30f, .88f, .22f));
-        entities.add(tiltedBlock(board, point(board.location, -.42, 5.02, .27), face, board.style.peg, .075f, 1.08f, .10f, -.62f));
-        entities.add(tiltedBlock(board, point(board.location, .42, 5.02, .27), face, board.style.peg, .075f, 1.08f, .10f, .62f));
-        for (double x : new double[]{-2.16, 2.16}) for (double y : new double[]{.26, 5.24}) entities.add(block(board, point(board.location, x, y, .29), face, board.style.peg, .12f, .12f, .10f));
-        for (double side : new double[]{-1.72, 1.72}) { entities.add(block(board, point(board.location, side, -.38, -.02), face, board.style.leg, .25f, .78f, .25f)); entities.add(block(board, point(board.location, side, -.76, .15), face, board.style.frame, .9f, .12f, .8f)); }
-        TextDisplay title = text(board, point(board.location, 0, 5.18, .25), face, .62f, Color.fromARGB(190, 5, 7, 10)); title.text(Component.text(board.name, board.style.accent).decorate(TextDecoration.BOLD)); entities.add(title);
-        entities.add(block(board, point(board.location, 0, -.17, .16), face, board.style.frame, 3.10f, .40f, .25f));
-        TextDisplay status = text(board, point(board.location, 0, -.17, .34), face, .37f, Color.fromARGB(0, 0, 0, 0)); entities.add(status);
-        Location interactionAt = point(board.location, 0, 2.75, .32);
-        Interaction interaction = world.spawn(interactionAt, Interaction.class, entity -> { entity.setInteractionWidth(4.55f); entity.setInteractionHeight(5.35f); entity.setResponsive(true); entity.setPersistent(false); entity.getPersistentDataContainer().set(key, PersistentDataType.STRING, "open:" + board.id); }); entities.add(interaction);
+        entities.add(block(board, point(board.location, 0, 2.72, 0), face, board.style.back, 4.30f, 5.10f, .16f));
+        entities.add(block(board, point(board.location, 0, 5.30, .01), face, board.style.frame, 4.56f, .16f, .28f));
+        entities.add(block(board, point(board.location, 0, .14, .01), face, board.style.frame, 4.56f, .16f, .28f));
+        for (double side : new double[]{-2.20, 2.20}) entities.add(block(board, point(board.location, side, 2.72, .01), face, board.style.frame, .16f, 5.22f, .28f));
+        for (double side : new double[]{-1.54, 1.54}) { entities.add(block(board, point(board.location, side, -.28, -.01), face, board.style.leg, .22f, .68f, .22f)); entities.add(block(board, point(board.location, side, -.63, .10), face, board.style.frame, .72f, .10f, .62f)); }
+        TextDisplay title = text(board, point(board.location, 0, 5.02, .29), face, .43f, Color.fromARGB(0, 0, 0, 0)); title.text(Component.text(board.name, board.style.accent).decorate(TextDecoration.BOLD)); entities.add(title);
+        TextDisplay status = text(board, point(board.location, 0, .15, .28), face, .28f, Color.fromARGB(0, 0, 0, 0)); entities.add(status);
+        Location interactionAt = point(board.location, 0, .12, .29);
+        Interaction interaction = world.spawn(interactionAt, Interaction.class, entity -> { entity.setInteractionWidth(4.20f); entity.setInteractionHeight(5.05f); entity.setResponsive(true); entity.setPersistent(false); entity.getPersistentDataContainer().set(key, PersistentDataType.STRING, "open:" + board.id); }); entities.add(interaction);
         View view = new View(board, status, entities); boards.put(board.id, view); reset(view);
     }
 
@@ -147,26 +141,26 @@ public final class PlinkoBoardManager implements Listener {
     private void renderLayout(View view, int requestedRows, List<Double> multipliers) {
         view.layout.forEach(entity -> { if (entity != null && !entity.isDead()) entity.remove(); }); view.layout.clear();
         int rows = Math.max(8, Math.min(16, requestedRows)); double gap = 3.7 / rows;
-        double top = 4.78, bottom = 1.02, rowGap = (top - bottom) / Math.max(1, rows - 1); float face = view.board.location.getYaw() + 180;
+        double top = 4.68, bottom = 1.05, rowGap = (top - bottom) / Math.max(1, rows - 1); float face = view.board.location.getYaw() + 180;
         for (int row = 0; row < rows; row++) {
             double y = top - row * rowGap;
             for (int column = 0; column <= row; column++) {
                 double x = (column - row / 2.0) * gap;
-                view.layout.add(block(view.board, point(view.board.location, x, y, .30), face, view.board.style.peg, .105f, .105f, .16f));
+                view.layout.add(block(view.board, point(view.board.location, x, y, .25), face, view.board.style.peg, .078f, .078f, .12f));
             }
         }
         for (int boundary = 0; boundary <= rows + 1; boundary++) {
             double x = (boundary - (rows + 1) / 2.0) * gap;
-            view.layout.add(block(view.board, point(view.board.location, x, .61, .34), face, view.board.style.peg, .045f, .70f, .18f));
+            view.layout.add(block(view.board, point(view.board.location, x, .61, .27), face, view.board.style.peg, .035f, .58f, .12f));
         }
         boolean hasMultipliers = multipliers != null && multipliers.size() == rows + 1;
         for (int slot = 0; slot <= rows; slot++) {
             double value = hasMultipliers ? multipliers.get(slot) : 0, x = (slot - rows / 2.0) * gap;
-            Material bin = hasMultipliers ? value >= 2 ? Material.LIME_CONCRETE : value >= 1 ? Material.YELLOW_CONCRETE : Material.RED_CONCRETE : view.board.style.back;
-            view.layout.add(block(view.board, point(view.board.location, x, .40, .30), face, bin, (float) (gap * .84), .28f, .17f));
             if (hasMultipliers) {
+                Material bin = value >= 2 ? Material.GREEN_TERRACOTTA : value >= 1 ? Material.YELLOW_TERRACOTTA : Material.RED_TERRACOTTA;
+                view.layout.add(block(view.board, point(view.board.location, x, .40, .27), face, bin, (float) (gap * .80), .24f, .12f));
                 NamedTextColor color = value >= 2 ? NamedTextColor.GREEN : value >= 1 ? NamedTextColor.YELLOW : NamedTextColor.RED;
-                TextDisplay label = text(view.board, point(view.board.location, x, .39, .43), face, rows >= 14 ? .125f : .15f, Color.fromARGB(185, 5, 7, 10));
+                TextDisplay label = text(view.board, point(view.board.location, x, .39, .37), face, rows >= 14 ? .115f : .14f, Color.fromARGB(145, 5, 7, 10));
                 label.text(Component.text(compactMultiplier(value), color).decoration(TextDecoration.BOLD, false)); label.setLineWidth(80); view.layout.add(label);
             }
         }
@@ -196,7 +190,6 @@ public final class PlinkoBoardManager implements Listener {
     private org.bukkit.util.Vector direction(float yaw) { double radians = Math.toRadians(yaw); return new org.bukkit.util.Vector(-Math.sin(radians), 0, Math.cos(radians)); }
     private Location point(Location origin, double right, double up, double forward) { double radians = Math.toRadians(origin.getYaw()); return origin.clone().add(-Math.cos(radians) * right + Math.sin(radians) * forward, up, -Math.sin(radians) * right - Math.cos(radians) * forward); }
     private BlockDisplay block(Board board, Location at, float yaw, Material material, float width, float height, float depth) { return at.getWorld().spawn(at, BlockDisplay.class, entity -> { entity.setBlock(material.createBlockData()); display(entity, board); entity.setRotation(yaw, 0); entity.setTransformation(new Transformation(new Vector3f(-width / 2, -height / 2, -depth / 2), new Quaternionf(), new Vector3f(width, height, depth), new Quaternionf())); }); }
-    private BlockDisplay tiltedBlock(Board board, Location at, float yaw, Material material, float width, float height, float depth, float roll) { return at.getWorld().spawn(at, BlockDisplay.class, entity -> { entity.setBlock(material.createBlockData()); display(entity, board); entity.setRotation(yaw, 0); float centerX=(float)(Math.cos(roll)*width/2-Math.sin(roll)*height/2),centerY=(float)(Math.sin(roll)*width/2+Math.cos(roll)*height/2); entity.setTransformation(new Transformation(new Vector3f(-centerX, -centerY, -depth / 2), new Quaternionf().rotateZ(roll), new Vector3f(width, height, depth), new Quaternionf())); }); }
     private TextDisplay text(Board board, Location at, float yaw, float scale, Color background) { return at.getWorld().spawn(at, TextDisplay.class, entity -> { display(entity, board); entity.setBillboard(Display.Billboard.FIXED); entity.setRotation(yaw, 0); entity.setAlignment(TextDisplay.TextAlignment.CENTER); entity.setShadowed(true); entity.setSeeThrough(false); entity.setBackgroundColor(background); entity.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale), new Quaternionf())); }); }
     private ItemDisplay item(Board board, Location at, float yaw, Material material, float scale) { return at.getWorld().spawn(at, ItemDisplay.class, entity -> { entity.setItemStack(new ItemStack(material)); display(entity, board); entity.setBillboard(Display.Billboard.FIXED); entity.setRotation(yaw, 0); entity.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED); entity.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale), new Quaternionf())); }); }
     private void display(Display display, Board board) { display.setPersistent(false); display.setViewRange(1.8f); display.setGlowing(board.glowing); if (board.glowing) display.setGlowColorOverride(board.style.glow); }
@@ -210,9 +203,9 @@ public final class PlinkoBoardManager implements Listener {
     public record BallDrop(List<Integer> path, int slot, double multiplier, double payout) { public BallDrop { path = List.copyOf(path); } }
     public record BoardSummary(String id, String name, String style, boolean glowing, float yaw, String world, int x, int y, int z) { public String locationText() { return world + " · " + x + ", " + y + ", " + z; } }
     private enum Style {
-        CLASSIC("classic", Material.DARK_OAK_PLANKS, Material.POLISHED_BLACKSTONE, Material.GOLD_BLOCK, Material.IRON_BLOCK, Material.SLIME_BALL, NamedTextColor.GOLD, Color.YELLOW),
-        ARCADE("arcade", Material.BLUE_CONCRETE, Material.CYAN_CONCRETE, Material.IRON_BLOCK, Material.SEA_LANTERN, Material.MAGMA_CREAM, NamedTextColor.AQUA, Color.AQUA),
-        ROYAL("royal", Material.PURPLE_CONCRETE, Material.GILDED_BLACKSTONE, Material.POLISHED_BLACKSTONE, Material.AMETHYST_BLOCK, Material.AMETHYST_SHARD, NamedTextColor.LIGHT_PURPLE, Color.PURPLE),
+        CLASSIC("classic", Material.DARK_OAK_PLANKS, Material.POLISHED_BLACKSTONE_BRICKS, Material.POLISHED_BLACKSTONE, Material.SMOOTH_STONE, Material.SLIME_BALL, NamedTextColor.GOLD, Color.YELLOW),
+        ARCADE("arcade", Material.BLUE_TERRACOTTA, Material.DEEPSLATE_TILES, Material.POLISHED_DEEPSLATE, Material.LIGHT_GRAY_CONCRETE, Material.MAGMA_CREAM, NamedTextColor.AQUA, Color.AQUA),
+        ROYAL("royal", Material.PURPLE_TERRACOTTA, Material.POLISHED_BLACKSTONE_BRICKS, Material.POLISHED_BLACKSTONE, Material.CALCITE, Material.AMETHYST_SHARD, NamedTextColor.LIGHT_PURPLE, Color.PURPLE),
         INDUSTRIAL("industrial", Material.DEEPSLATE_TILES, Material.IRON_BLOCK, Material.POLISHED_BASALT, Material.LIGHT_GRAY_CONCRETE, Material.FIRE_CHARGE, NamedTextColor.YELLOW, Color.ORANGE);
         final String id; final Material back, frame, leg, peg, ball; final NamedTextColor accent; final Color glow;
         Style(String id, Material back, Material frame, Material leg, Material peg, Material ball, NamedTextColor accent, Color glow) { this.id = id; this.back = back; this.frame = frame; this.leg = leg; this.peg = peg; this.ball = ball; this.accent = accent; this.glow = glow; }
