@@ -12,7 +12,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -110,7 +109,7 @@ public final class CoinflipBoardManager implements Listener {
         List<Entity> entities=new ArrayList<>();float face=board.location.getYaw()+180;
 
         // Precise display geometry keeps the model straight and properly joined.
-        // Invisible armor stands carry the decorative coins above the frame.
+        // Item displays keep the decorative materials seated against the frame.
         entities.add(block(world,point(board.location,0,2.28,0),face,board.style.panel,3.72f,2.18f,.16f));
         entities.add(block(world,point(board.location,0,3.43,.01),face,board.style.frame,4.02f,.20f,.28f));
         entities.add(block(world,point(board.location,0,1.13,.01),face,board.style.frame,4.02f,.20f,.28f));
@@ -119,7 +118,7 @@ public final class CoinflipBoardManager implements Listener {
         for(double side:new double[]{-1.28,1.28}){
             entities.add(block(world,point(board.location,side,.57,.04),face,board.style.post,.20f,1.14f,.20f));
             entities.add(block(world,point(board.location,side,.08,.04),face,board.style.frame,.72f,.16f,.54f));
-            entities.add(decoration(world,point(board.location,side,3.71,.10),face,board.style.icon,side<0));
+            entities.add(decoration(world,point(board.location,side,3.64,.10),face,board.style.icon,side<0));
         }
 
         TextDisplay header=text(world,point(board.location,0,3.12,.19),face,Color.fromARGB(145,5,5,5),1.08f);entities.add(header);
@@ -135,7 +134,7 @@ public final class CoinflipBoardManager implements Listener {
     }
 
     private BlockDisplay block(World world,Location center,float yaw,Material material,float width,float height,float depth){return world.spawn(center,BlockDisplay.class,e->{e.setBlock(material.createBlockData());e.setRotation(yaw,0);e.setPersistent(false);e.setViewRange(1.5f);e.setTransformation(new Transformation(new Vector3f(-width/2,-height/2,-depth/2),new Quaternionf(),new Vector3f(width,height,depth),new Quaternionf()));});}
-    private ArmorStand decoration(World world,Location target,float yaw,Material material,boolean left){return world.spawn(target.clone().add(0,-.48,0),ArmorStand.class,stand->{stand.setInvisible(true);stand.setMarker(true);stand.setSmall(true);stand.setGravity(false);stand.setPersistent(false);stand.setBasePlate(false);stand.setArms(true);stand.setRotation(yaw,0);stand.setRightArmPose(new EulerAngle(Math.toRadians(-78),0,Math.toRadians(left?-18:18)));stand.getEquipment().setItemInMainHand(new ItemStack(material),true);stand.getPersistentDataContainer().set(boardKey,PersistentDataType.STRING,"model");});}
+    private ItemDisplay decoration(World world,Location target,float yaw,Material material,boolean left){return world.spawn(target,ItemDisplay.class,display->{display.setItemStack(new ItemStack(material));display.setBillboard(Display.Billboard.FIXED);display.setRotation(yaw,0);display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);display.setPersistent(false);display.setViewRange(1.5f);display.setTransformation(new Transformation(new Vector3f(),new Quaternionf().rotateZ((float)Math.toRadians(left?-9:9)),new Vector3f(.42f),new Quaternionf()));display.getPersistentDataContainer().set(boardKey,PersistentDataType.STRING,"model");});}
     private TextDisplay text(World world,Location location,float yaw,Color background,float scale){return world.spawn(location,TextDisplay.class,e->{e.setBillboard(Display.Billboard.FIXED);e.setRotation(yaw,0);e.setAlignment(TextDisplay.TextAlignment.CENTER);e.setBackgroundColor(background);e.setShadowed(true);e.setSeeThrough(false);e.setLineWidth(340);e.setPersistent(false);e.setTransformation(new Transformation(new Vector3f(),new Quaternionf(),new Vector3f(scale),new Quaternionf()));});}
     private Location placement(Player player){Location location=player.getLocation().clone();location.setPitch(0);location.setYaw(snapYaw(location.getYaw()));location.add(direction(location.getYaw()).multiply(3));location.setY(Math.floor(location.getY())+.03);return location;}
     private Location point(Location origin,double right,double up,double forward){double r=Math.toRadians(origin.getYaw());return origin.clone().add(-Math.cos(r)*right+Math.sin(r)*forward,up,-Math.sin(r)*right-Math.cos(r)*forward);}

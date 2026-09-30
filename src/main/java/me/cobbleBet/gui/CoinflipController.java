@@ -72,6 +72,7 @@ public final class CoinflipController implements Listener {
     }
 
     public void openLobby(Player player, int page) {
+        if (!plugin.requireGameEnabled(player, "coinflip")) return;
         requestLobby();
         renderLobby(player, page);
     }
@@ -100,6 +101,7 @@ public final class CoinflipController implements Listener {
     }
 
     public void openCreateMenu(Player player) {
+        if (!plugin.requireGameEnabled(player, "coinflip")) return;
         MenuHolder holder = new MenuHolder(Kind.CREATE, 0, null, false);
         Inventory inv = Bukkit.createInventory(holder, 27, Component.text("Create a Coinflip", NamedTextColor.DARK_GREEN)); holder.inventory = inv;
         fill(inv, Material.BLACK_STAINED_GLASS_PANE);
@@ -115,6 +117,7 @@ public final class CoinflipController implements Listener {
     }
 
     public void create(Player player, String rawAmount) {
+        if (!plugin.requireGameEnabled(player, "coinflip")) return;
         double amount;
         try { amount = Double.parseDouble(rawAmount.replace(",", "")); }
         catch (NumberFormatException error) { player.sendMessage(Component.text("Enter a valid Coinflip amount.", NamedTextColor.RED)); return; }
@@ -125,6 +128,7 @@ public final class CoinflipController implements Listener {
     }
 
     public void confirm(Player player, String id, boolean cancel) {
+        if (!cancel && !plugin.requireGameEnabled(player, "coinflip")) return;
         Listing listing = listings.stream().filter(row -> row.id.equals(id)).findFirst().orElse(null);
         if (listing == null) { player.sendMessage(Component.text("That Coinflip is no longer open.", NamedTextColor.RED)); requestLobby(); return; }
         MenuHolder holder = new MenuHolder(Kind.CONFIRM, 0, id, cancel);
@@ -139,6 +143,7 @@ public final class CoinflipController implements Listener {
     }
 
     private void send(Player player, String action, String id, double amount) {
+        if (!action.equals("cancel") && !plugin.requireGameEnabled(player, "coinflip")) return;
         if (plugin.cobbleSocketClient == null || !plugin.cobbleSocketClient.isApproved()) {
             player.sendMessage(Component.text("CobbleBet is reconnecting. Try again shortly.", NamedTextColor.RED)); return;
         }

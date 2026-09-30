@@ -4,6 +4,7 @@ import me.cobbleBet.commands.CobbleBetCommand;
 import me.cobbleBet.commands.GambleCommand;
 import me.cobbleBet.commands.GameShortcutCommand;
 import me.cobbleBet.commands.CoinflipCommand;
+import me.cobbleBet.commands.BlackjackCommand;
 import me.cobbleBet.commands.WalletCommand;
 import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.economy.EconomyManager;
@@ -35,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -104,6 +106,8 @@ public final class Main extends JavaPlugin {
     public me.cobbleBet.gui.CobbleMenuController menuController;
     public me.cobbleBet.gui.CoinflipController coinflipController;
     public me.cobbleBet.visuals.CoinflipBoardManager coinflipBoardManager;
+    public me.cobbleBet.gui.BlackjackController blackjackController;
+    public me.cobbleBet.visuals.BlackjackTableManager blackjackTableManager;
     private final long startedAt = System.currentTimeMillis();
     private volatile long lastStatusAt;
     private volatile String officialPluginVersion = "";
@@ -129,12 +133,17 @@ public final class Main extends JavaPlugin {
         menuController = new me.cobbleBet.gui.CobbleMenuController(this);
         coinflipController = new me.cobbleBet.gui.CoinflipController(this);
         coinflipBoardManager = new me.cobbleBet.visuals.CoinflipBoardManager(this);
+        blackjackController = new me.cobbleBet.gui.BlackjackController(this);
+        blackjackTableManager = new me.cobbleBet.visuals.BlackjackTableManager(this);
         registerCommands();
         getServer().getPluginManager().registerEvents(menuController, this);
         getServer().getPluginManager().registerEvents(coinflipController, this);
         getServer().getPluginManager().registerEvents(coinflipBoardManager, this);
+        getServer().getPluginManager().registerEvents(blackjackController, this);
+        getServer().getPluginManager().registerEvents(blackjackTableManager, this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         coinflipBoardManager.load();
+        blackjackTableManager.load();
         connectSocket();
         Bukkit.getScheduler().runTaskTimer(this, () -> coinflipController.requestLobby(), 20L * 15, 20L * 15);
         startStatusUpdates();
@@ -160,6 +169,7 @@ public final class Main extends JavaPlugin {
             gamblingIndicatorManager.clearAll();
         }
         if (coinflipBoardManager != null) coinflipBoardManager.clearAll();
+        if (blackjackTableManager != null) blackjackTableManager.clearAll();
     }
 
     // =========================
@@ -456,6 +466,8 @@ public final class Main extends JavaPlugin {
         status.add("permissionRequirements", getPermissionRequirements());
         status.addProperty("broadcastingEnabled", broadcastingEnabled && broadcastEvents.getOrDefault("bigWin", false));
         status.addProperty("bigWinThreshold", bigWinThreshold);
+        status.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());
+        status.add("websiteSettings", me.cobbleBet.storage.WebsiteSettingsStore.getSettings());
         JsonArray players = new JsonArray();
         for (Player player : Bukkit.getOnlinePlayers()) {
             JsonObject entry = new JsonObject();
@@ -492,7 +504,9 @@ public final class Main extends JavaPlugin {
 
         GameShortcutCommand gameShortcut = new GameShortcutCommand();
         getCommand("mines").setExecutor(gameShortcut);
-        getCommand("blackjack").setExecutor(gameShortcut);
+        BlackjackCommand blackjack = new BlackjackCommand();
+        getCommand("blackjack").setExecutor(blackjack);
+        getCommand("blackjack").setTabCompleter(blackjack);
         getCommand("roulette").setExecutor(gameShortcut);
         CoinflipCommand coinflip = new CoinflipCommand();
         getCommand("coinflip").setExecutor(coinflip);
@@ -523,6 +537,20 @@ public final class Main extends JavaPlugin {
                 ? instance.getConfig().getBoolean("gambleCommandNeedsPermission", false)
                 : true;
         return instance.getConfig().getBoolean("permissions." + key, fallback);
+    }
+
+    public boolean isGameEnabled(String game) {
+        return !getConfig().getBoolean("websiteCustomization.maintenance.enabled", false)
+                && getConfig().getBoolean("websiteCustomization.enabledGames." + game, true);
+    }
+
+    public boolean requireGameEnabled(Player player, String game) {
+        if (isGameEnabled(game)) return true;
+        String message = getConfig().getBoolean("websiteCustomization.maintenance.enabled", false)
+                ? getConfig().getString("websiteCustomization.maintenance.message", "Games are temporarily unavailable.")
+                : game.substring(0, 1).toUpperCase(Locale.ROOT) + game.substring(1) + " is disabled on this server.";
+        player.sendMessage(Component.text(message == null ? "This game is currently unavailable." : message, NamedTextColor.RED));
+        return false;
     }
 
     public static JsonObject getPermissionRequirements() {

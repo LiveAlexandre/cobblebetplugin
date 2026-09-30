@@ -29,6 +29,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketCoinflipOutcomeListener("coinflipOutcome", client));
         listeners.add(new SocketCoinflipLobbyListener("coinflipLobby", client));
         listeners.add(new SocketCoinflipActionResultListener("coinflipActionResult", client));
+        listeners.add(new SocketBlackjackEventListener("blackjackEvent", client));
         listeners.add(new SocketSetEconomyListener("setEconomy", client));
         listeners.add(new SocketSetPermissionRequirementsListener("setPermissionRequirements", client));
         listeners.add(new SocketSetBroadcastSettingsListener("setBroadcastSettings", client));
