@@ -44,6 +44,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.add("permissionRequirements", Main.getPermissionRequirements());
         hello.addProperty("supportsWebsiteSettings", true);
         hello.addProperty("supportsBalanceTransactions", true);
+        hello.addProperty("supportsReleaseAutoUpdateGate", true);
         hello.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());
         hello.add("websiteSettings", me.cobbleBet.storage.WebsiteSettingsStore.getSettings());
         String icon = Main.getInstance().readServerIconDataUrl();

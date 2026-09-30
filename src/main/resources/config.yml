@@ -19,10 +19,6 @@ economyItem: "DIAMOND"
 # Leave blank to use the currency name provided by the Vault economy plugin.
 vaultCurrencyName: ""
 
-# Permanent public identifier used to keep website settings and Coinflips separate per server.
-# Generated automatically on first start. Do not copy this value between different servers.
-serverId: ""
-
 # Automatically download verified CobbleBet updates into plugins/update.
 # The staged update is installed safely the next time the server restarts.
 autoUpdate: true

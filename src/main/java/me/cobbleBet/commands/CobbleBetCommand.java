@@ -58,13 +58,27 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("game") || args[0].equalsIgnoreCase("games")) {
             if (!(sender instanceof Player player)) { sender.sendMessage("§cPhysical games must be managed in-game."); return true; }
             if (args.length == 1) { Main.getInstance().menuController.openPhysicalGames(player); return true; }
+            if(args[1].equalsIgnoreCase("plinko")){
+                var boards=Main.getInstance().plinkoBoardManager;
+                if(args.length==2){Main.getInstance().menuController.openPlinkoBoards(player);return true;}
+                if(args[2].equalsIgnoreCase("create")){String style=args.length>=4?args[3]:"classic",name=args.length>=5?String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)):"PLINKO";boards.create(player,style,name);return true;}
+                String id=args[2];if(args.length<4){Main.getInstance().menuController.openPlinkoBoard(player,id);return true;}
+                switch(args[3].toLowerCase()){case"movehere"->boards.moveHere(player,id);case"remove"->boards.remove(player,id);case"glow"->boards.toggleGlow(player,id);case"rotateleft"->boards.rotate(player,id,-1);case"rotateright"->boards.rotate(player,id,1);case"style"->{if(args.length>=5)boards.changeStyle(player,id,args[4]);}case"rename"->{if(args.length>=5)boards.rename(player,id,String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)));}default->player.sendMessage("§eActions: movehere, rotateleft, rotateright, glow, style, rename, remove");}return true;
+            }
+            if(args[1].equalsIgnoreCase("mines")){
+                var fields=Main.getInstance().minesFieldManager;
+                if(args.length==2){Main.getInstance().menuController.openMinesFields(player);return true;}
+                if(args[2].equalsIgnoreCase("create")){String style=args.length>=4?args[3]:"classic",layout=args.length>=5?args[4]:"horizontal",mode=args.length>=6?args[5]:"gui",name=args.length>=7?String.join(" ",java.util.Arrays.copyOfRange(args,6,args.length)):"MINES";fields.create(player,style,layout,mode,name);return true;}
+                String id=args[2];if(args.length<4){Main.getInstance().menuController.openMinesField(player,id);return true;}
+                switch(args[3].toLowerCase()){case"movehere"->fields.moveHere(player,id);case"remove"->fields.remove(player,id);case"style"->{if(args.length>=5)fields.changeStyle(player,id,args[4]);}case"layout"->{if(args.length>=5)fields.changeLayout(player,id,args[4]);}case"mode"->{if(args.length>=5)fields.changeMode(player,id,args[4]);}case"rename"->{if(args.length>=5)fields.rename(player,id,String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)));}default->player.sendMessage("§eActions: movehere, style, layout, mode, rename, remove");}return true;
+            }
             boolean coinflip=args[1].equalsIgnoreCase("coinflip"),blackjack=args[1].equalsIgnoreCase("blackjack");
             if (!coinflip&&!blackjack) { sender.sendMessage("§eUsage: /cobblebet game <coinflip|blackjack>"); return true; }
             if (args.length == 2) { if(coinflip)Main.getInstance().menuController.openCoinflipBoards(player);else Main.getInstance().menuController.openBlackjackTables(player); return true; }
             if (args[2].equalsIgnoreCase("create")) {
                 String style=args.length>=4?args[3]:(coinflip?"street":"casino");
-                String name=args.length>=5?String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)):(coinflip?"COINFLIP":"BLACKJACK");
-                if(coinflip)Main.getInstance().coinflipBoardManager.create(player,style,name);else Main.getInstance().blackjackTableManager.create(player,style,name);return true;
+                if(coinflip){String name=args.length>=5?String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)):"COINFLIP";Main.getInstance().coinflipBoardManager.create(player,style,name);}
+                else{boolean hasMode=args.length>=5&&(args[4].equalsIgnoreCase("gui")||args[4].equalsIgnoreCase("world")||args[4].equalsIgnoreCase("physical"));String mode=hasMode?args[4]:"gui";int nameStart=hasMode?5:4;String name=args.length>nameStart?String.join(" ",java.util.Arrays.copyOfRange(args,nameStart,args.length)):"BLACKJACK";Main.getInstance().blackjackTableManager.create(player,style,mode,name);}return true;
             }
             String id=args[2];
             if(args.length<4){if(coinflip)Main.getInstance().menuController.openCoinflipBoard(player,id);else Main.getInstance().menuController.openBlackjackTable(player,id);return true;}
@@ -72,8 +86,12 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
                 case "movehere"->{if(coinflip)Main.getInstance().coinflipBoardManager.moveHere(player,id);else Main.getInstance().blackjackTableManager.moveHere(player,id);}
                 case "remove"->{if(coinflip)Main.getInstance().coinflipBoardManager.remove(player,id);else Main.getInstance().blackjackTableManager.remove(player,id);}
                 case "style"->{if(args.length<5)player.sendMessage("§eUsage: /cobblebet game "+args[1].toLowerCase()+" "+id+" style <style>");else if(coinflip)Main.getInstance().coinflipBoardManager.changeStyle(player,id,args[4]);else Main.getInstance().blackjackTableManager.changeStyle(player,id,args[4]);}
+                case "mode"->{if(coinflip)player.sendMessage("§cCoinflip boards do not use play modes.");else if(args.length<5)player.sendMessage("§eUsage: /cobblebet game blackjack "+id+" mode <gui|world>");else Main.getInstance().blackjackTableManager.changeMode(player,id,args[4]);}
+                case "glow"->{if(coinflip)player.sendMessage("§cUse this option on a Blackjack table.");else Main.getInstance().blackjackTableManager.toggleGlow(player,id);}
+                case "rotateleft"->{if(coinflip)player.sendMessage("§cUse this option on a Blackjack table.");else Main.getInstance().blackjackTableManager.rotate(player,id,-1);}
+                case "rotateright"->{if(coinflip)player.sendMessage("§cUse this option on a Blackjack table.");else Main.getInstance().blackjackTableManager.rotate(player,id,1);}
                 case "rename"->{if(args.length<5)player.sendMessage("§eUsage: /cobblebet game "+args[1].toLowerCase()+" "+id+" rename <name>");else if(coinflip)Main.getInstance().coinflipBoardManager.rename(player,id,String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)));else Main.getInstance().blackjackTableManager.rename(player,id,String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)));}
-                default->player.sendMessage("§eActions: movehere, style <style>, rename <name>, remove");
+                default->player.sendMessage(coinflip?"§eActions: movehere, style <style>, rename <name>, remove":"§eActions: movehere, rotateleft, rotateright, mode <gui|world>, glow, style <style>, rename <name>, remove");
             }
             return true;
         }
@@ -173,14 +191,29 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             completions.add("key");
             completions.add("game");
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("game") || args[0].equalsIgnoreCase("games"))) completions.addAll(List.of("coinflip","blackjack"));
+        if (args.length == 2 && (args[0].equalsIgnoreCase("game") || args[0].equalsIgnoreCase("games"))) completions.addAll(List.of("coinflip","mines","blackjack","plinko"));
         if (args.length == 3 && args[1].equalsIgnoreCase("coinflip")) { completions.add("create"); completions.addAll(Main.getInstance().coinflipBoardManager.summaries().stream().map(me.cobbleBet.visuals.CoinflipBoardManager.BoardSummary::id).toList()); }
         if (args.length == 3 && args[1].equalsIgnoreCase("blackjack")) { completions.add("create"); completions.addAll(Main.getInstance().blackjackTableManager.summaries().stream().map(me.cobbleBet.visuals.BlackjackTableManager.TableSummary::id).toList()); }
+        if (args.length == 3 && args[1].equalsIgnoreCase("mines")) { completions.add("create"); completions.addAll(Main.getInstance().minesFieldManager.summaries().stream().map(me.cobbleBet.visuals.MinesFieldManager.FieldSummary::id).toList()); }
+        if (args.length == 3 && args[1].equalsIgnoreCase("plinko")) { completions.add("create"); completions.addAll(Main.getInstance().plinkoBoardManager.summaries().stream().map(me.cobbleBet.visuals.PlinkoBoardManager.BoardSummary::id).toList()); }
         if (args.length == 4 && args[1].equalsIgnoreCase("coinflip") && args[2].equalsIgnoreCase("create")) completions.addAll(Main.getInstance().coinflipBoardManager.styles());
         if (args.length == 4 && args[1].equalsIgnoreCase("blackjack") && args[2].equalsIgnoreCase("create")) completions.addAll(Main.getInstance().blackjackTableManager.styles());
-        if (args.length == 4 && (args[1].equalsIgnoreCase("coinflip")||args[1].equalsIgnoreCase("blackjack")) && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","style","rename","remove"));
+        if (args.length == 5 && args[1].equalsIgnoreCase("blackjack") && args[2].equalsIgnoreCase("create")) completions.addAll(List.of("gui","world"));
+        if (args.length == 4 && args[1].equalsIgnoreCase("mines") && args[2].equalsIgnoreCase("create")) completions.addAll(Main.getInstance().minesFieldManager.styles());
+        if (args.length == 4 && args[1].equalsIgnoreCase("plinko") && args[2].equalsIgnoreCase("create")) completions.addAll(Main.getInstance().plinkoBoardManager.styles());
+        if (args.length == 5 && args[1].equalsIgnoreCase("mines") && args[2].equalsIgnoreCase("create")) completions.addAll(List.of("horizontal","vertical"));
+        if (args.length == 6 && args[1].equalsIgnoreCase("mines") && args[2].equalsIgnoreCase("create")) completions.addAll(List.of("gui","world"));
+        if (args.length == 4 && args[1].equalsIgnoreCase("mines") && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","style","layout","mode","rename","remove"));
+        if (args.length == 5 && args[1].equalsIgnoreCase("mines") && args[3].equalsIgnoreCase("style")) completions.addAll(Main.getInstance().minesFieldManager.styles());
+        if (args.length == 5 && args[1].equalsIgnoreCase("mines") && args[3].equalsIgnoreCase("layout")) completions.addAll(List.of("horizontal","vertical"));
+        if (args.length == 5 && args[1].equalsIgnoreCase("mines") && args[3].equalsIgnoreCase("mode")) completions.addAll(List.of("gui","world"));
+        if (args.length == 4 && args[1].equalsIgnoreCase("coinflip") && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","style","rename","remove"));
+        if (args.length == 4 && args[1].equalsIgnoreCase("blackjack") && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","rotateleft","rotateright","mode","glow","style","rename","remove"));
+        if (args.length == 4 && args[1].equalsIgnoreCase("plinko") && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","rotateleft","rotateright","glow","style","rename","remove"));
         if (args.length == 5 && args[1].equalsIgnoreCase("coinflip") && args[3].equalsIgnoreCase("style")) completions.addAll(Main.getInstance().coinflipBoardManager.styles());
         if (args.length == 5 && args[1].equalsIgnoreCase("blackjack") && args[3].equalsIgnoreCase("style")) completions.addAll(Main.getInstance().blackjackTableManager.styles());
+        if (args.length == 5 && args[1].equalsIgnoreCase("plinko") && args[3].equalsIgnoreCase("style")) completions.addAll(Main.getInstance().plinkoBoardManager.styles());
+        if (args.length == 5 && args[1].equalsIgnoreCase("blackjack") && args[3].equalsIgnoreCase("mode")) completions.addAll(List.of("gui","world"));
 
         return completions;
     }

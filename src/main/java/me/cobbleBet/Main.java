@@ -5,11 +5,13 @@ import me.cobbleBet.commands.GambleCommand;
 import me.cobbleBet.commands.GameShortcutCommand;
 import me.cobbleBet.commands.CoinflipCommand;
 import me.cobbleBet.commands.BlackjackCommand;
+import me.cobbleBet.commands.MinesCommand;
 import me.cobbleBet.commands.WalletCommand;
 import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.economy.EconomyManager;
 import me.cobbleBet.players.PlayerWallet;
 import me.cobbleBet.storage.PlayerWalletStorage;
+import me.cobbleBet.storage.PluginDataStore;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -98,6 +100,7 @@ public final class Main extends JavaPlugin {
     public static HashMap<UUID, PlayerWallet> playerWalletHashMap = new HashMap<>();
 
     private PlayerWalletStorage playerWalletStorage;
+    private PluginDataStore dataStore;
     private EconomyManager economyManager;
     public CobbleSocketClient cobbleSocketClient;
     public final ConcurrentHashMap<UUID, Long> pendingAdminPanelRequests = new ConcurrentHashMap<>();
@@ -108,11 +111,16 @@ public final class Main extends JavaPlugin {
     public me.cobbleBet.visuals.CoinflipBoardManager coinflipBoardManager;
     public me.cobbleBet.gui.BlackjackController blackjackController;
     public me.cobbleBet.visuals.BlackjackTableManager blackjackTableManager;
+    public me.cobbleBet.gui.MinesController minesController;
+    public me.cobbleBet.visuals.MinesFieldManager minesFieldManager;
+    public me.cobbleBet.gui.PlinkoController plinkoController;
+    public me.cobbleBet.visuals.PlinkoBoardManager plinkoBoardManager;
     private final long startedAt = System.currentTimeMillis();
     private volatile long lastStatusAt;
     private volatile String officialPluginVersion = "";
     private volatile String officialPluginJarName = "CobbleBet.jar";
     private volatile String officialPluginSha256 = "";
+    private volatile boolean officialReleaseAutoUpdateAllowed;
     private final AtomicBoolean updateDownloadRunning = new AtomicBoolean(false);
     private volatile String stagedPluginVersion = "";
     private volatile String autoUpdateFailure = "";
@@ -123,6 +131,8 @@ public final class Main extends JavaPlugin {
         instance = this;
 
         saveDefaultConfig();
+        dataStore = new PluginDataStore(this);
+        dataStore.migrateFromConfig(getConfig());
         ensureServerId();
         loadConfigValues();
         me.cobbleBet.storage.WebsiteSettingsStore.load(this);
@@ -135,15 +145,25 @@ public final class Main extends JavaPlugin {
         coinflipBoardManager = new me.cobbleBet.visuals.CoinflipBoardManager(this);
         blackjackController = new me.cobbleBet.gui.BlackjackController(this);
         blackjackTableManager = new me.cobbleBet.visuals.BlackjackTableManager(this);
+        minesController = new me.cobbleBet.gui.MinesController(this);
+        minesFieldManager = new me.cobbleBet.visuals.MinesFieldManager(this);
+        plinkoController = new me.cobbleBet.gui.PlinkoController(this);
+        plinkoBoardManager = new me.cobbleBet.visuals.PlinkoBoardManager(this);
         registerCommands();
         getServer().getPluginManager().registerEvents(menuController, this);
         getServer().getPluginManager().registerEvents(coinflipController, this);
         getServer().getPluginManager().registerEvents(coinflipBoardManager, this);
         getServer().getPluginManager().registerEvents(blackjackController, this);
         getServer().getPluginManager().registerEvents(blackjackTableManager, this);
+        getServer().getPluginManager().registerEvents(minesController, this);
+        getServer().getPluginManager().registerEvents(minesFieldManager, this);
+        getServer().getPluginManager().registerEvents(plinkoController, this);
+        getServer().getPluginManager().registerEvents(plinkoBoardManager, this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         coinflipBoardManager.load();
         blackjackTableManager.load();
+        minesFieldManager.load();
+        plinkoBoardManager.load();
         connectSocket();
         Bukkit.getScheduler().runTaskTimer(this, () -> coinflipController.requestLobby(), 20L * 15, 20L * 15);
         startStatusUpdates();
@@ -170,6 +190,8 @@ public final class Main extends JavaPlugin {
         }
         if (coinflipBoardManager != null) coinflipBoardManager.clearAll();
         if (blackjackTableManager != null) blackjackTableManager.clearAll();
+        if (minesFieldManager != null) minesFieldManager.clearAll();
+        if (plinkoBoardManager != null) plinkoBoardManager.clearAll();
     }
 
     // =========================
@@ -196,7 +218,7 @@ public final class Main extends JavaPlugin {
         // PREMIUM
         cobblebetToken = Main.getInstance().getConfig().getString("cobblebetToken", "");
         serverDisplayName = Main.getInstance().getConfig().getString("serverName", "").trim();
-        serverId = Main.getInstance().getConfig().getString("serverId", "").trim();
+        serverId = Main.getInstance().getDataStore().getString("serverId", "").trim();
         premiumEnabled = Main.getInstance().getConfig().getBoolean("premiumEnabled", false);
 
         // BROADCAST SETTINGS
@@ -235,27 +257,18 @@ public final class Main extends JavaPlugin {
             Main.getInstance().economyManager.refreshVaultCurrencyName();
         }
 
-        // LOG
-        Bukkit.getLogger().info("=== CobbleBet Config Loaded ===");
-        Bukkit.getLogger().info("Economy: " + economyType);
-        Bukkit.getLogger().info("Item: " + economyItem);
-        Bukkit.getLogger().info("Vault Currency: " + vaultCurrencyName);
-        Bukkit.getLogger().info("Max Balance: " + maximumBalance);
-        Bukkit.getLogger().info("Premium: " + premiumEnabled);
-        Bukkit.getLogger().info("Broadcasting: " + broadcastingEnabled);
-        Bukkit.getLogger().info("Broadcast Events: " + broadcastEvents);
-        Bukkit.getLogger().info("Test Mode: " + testMode);
-        Bukkit.getLogger().info("Auto Update: " + autoUpdateEnabled);
+        Main.getInstance().getLogger().info("Settings loaded: economy=" + economyType
+                + ", autoUpdate=" + autoUpdateEnabled + ", broadcasts=" + broadcastingEnabled
+                + ", testMode=" + testMode + ".");
     }
 
     private void ensureServerId() {
-        String configured = getConfig().getString("serverId", "").trim();
+        String configured = dataStore.getString("serverId", "").trim();
         try {
             UUID.fromString(configured);
         } catch (IllegalArgumentException ignored) {
             configured = UUID.randomUUID().toString();
-            getConfig().set("serverId", configured);
-            saveConfig();
+            dataStore.set("serverId", configured);
             getLogger().info("Created this server's permanent CobbleBet ID.");
         }
         serverId = configured;
@@ -278,17 +291,21 @@ public final class Main extends JavaPlugin {
         connectSocket();
     }
 
-    public void setOfficialPluginRelease(String version, String jarName, String sha256) {
+    public void setOfficialPluginRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed) {
         if (version != null && !version.isBlank()) officialPluginVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialPluginJarName = jarName.trim();
         if (sha256 != null && sha256.matches("[a-fA-F0-9]{64}")) officialPluginSha256 = sha256.toLowerCase();
+        officialReleaseAutoUpdateAllowed = autoUpdateAllowed;
+        if (!autoUpdateAllowed && officialPluginVersion.equals(stagedPluginVersion)) {
+            Bukkit.getScheduler().runTask(this, this::cancelStagedPluginUpdate);
+        }
         checkForPluginUpdate();
     }
 
     public void checkForPluginUpdate() {
         String installedVersion = getDescription().getVersion();
         String latestVersion = officialPluginVersion;
-        if (!autoUpdateEnabled || latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
+        if (!autoUpdateEnabled || !officialReleaseAutoUpdateAllowed || latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
         if (latestVersion.equals(stagedPluginVersion) || !updateDownloadRunning.compareAndSet(false, true)) return;
         autoUpdateFailure = "";
 
@@ -330,8 +347,8 @@ public final class Main extends JavaPlugin {
                         throw new IllegalStateException("downloaded JAR version does not match " + latestVersion);
                     }
                 }
-                if (!autoUpdateEnabled) {
-                    getLogger().info("Automatic CobbleBet update was disabled before the download completed; the staged update was cancelled.");
+                if (!autoUpdateEnabled || !officialReleaseAutoUpdateAllowed || !latestVersion.equals(officialPluginVersion)) {
+                    getLogger().info("The CobbleBet update was no longer approved before its download completed; staging was cancelled.");
                     return;
                 }
                 File target = new File(updateFolder, getFile().getName());
@@ -345,8 +362,7 @@ public final class Main extends JavaPlugin {
                 autoUpdateFailure = "";
                 getLogger().info("CobbleBet " + latestVersion + " downloaded to " + target + ". It will install on the next server restart.");
                 Bukkit.getScheduler().runTask(this, () -> {
-                    getConfig().set("updater.pendingVersion", latestVersion);
-                    saveConfig();
+                    dataStore.set("updater.pendingVersion", latestVersion);
                 });
             } catch (Exception error) {
                 autoUpdateFailure = error.getMessage() == null ? "unknown download error" : error.getMessage();
@@ -363,22 +379,24 @@ public final class Main extends JavaPlugin {
             checkForPluginUpdate();
             return;
         }
+        cancelStagedPluginUpdate();
+    }
+
+    private void cancelStagedPluginUpdate() {
         stagedPluginVersion = "";
-        getConfig().set("updater.pendingVersion", null);
+        dataStore.set("updater.pendingVersion", null);
         try {
             Files.deleteIfExists(new File(getServer().getUpdateFolderFile(), getFile().getName()).toPath());
         } catch (Exception error) {
             getLogger().warning("Could not remove the staged CobbleBet update: " + error.getMessage());
         }
-        saveConfig();
     }
 
     private void prepareInstalledUpdateNotice() {
-        String pendingVersion = getConfig().getString("updater.pendingVersion", "").trim();
+        String pendingVersion = dataStore.getString("updater.pendingVersion", "").trim();
         if (!pendingVersion.isBlank() && pendingVersion.equals(getDescription().getVersion())) {
             installedUpdateNoticeVersion = pendingVersion;
-            getConfig().set("updater.pendingVersion", null);
-            saveConfig();
+            dataStore.set("updater.pendingVersion", null);
         }
     }
 
@@ -401,7 +419,7 @@ public final class Main extends JavaPlugin {
         }
         String latestVersion = officialPluginVersion;
         if (latestVersion.isBlank() || !isOlderVersion(installedVersion, latestVersion)) return;
-        if (autoUpdateEnabled && autoUpdateFailure.isBlank()) return;
+        if (autoUpdateEnabled && officialReleaseAutoUpdateAllowed && autoUpdateFailure.isBlank()) return;
         String noticeKey = "needed:" + latestVersion;
         if (noticeKey.equals(notifiedUpdateVersions.put(player.getUniqueId(), noticeKey))) return;
 
@@ -417,9 +435,11 @@ public final class Main extends JavaPlugin {
                 .append(Component.text("  →  Latest ", NamedTextColor.GRAY))
                 .append(Component.text(latestVersion, NamedTextColor.GREEN)));
         player.sendMessage(Component.text("Click to update: ", NamedTextColor.GRAY).append(download));
-        String reason = autoUpdateEnabled
-                ? "Automatic update failed (" + autoUpdateFailure + "). Download the JAR manually and restart your server."
-                : "Automatic updates are disabled. Replace the old JAR and restart your server.";
+        String reason = !autoUpdateEnabled
+                ? "Automatic updates are disabled. Replace the old JAR and restart your server."
+                : !officialReleaseAutoUpdateAllowed
+                ? "This release was published for manual installation. Replace the old JAR and restart your server."
+                : "Automatic update failed (" + autoUpdateFailure + "). Download the JAR manually and restart your server.";
         player.sendMessage(Component.text(reason, NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.empty());
     }
@@ -503,7 +523,9 @@ public final class Main extends JavaPlugin {
         getCommand("gamble").setExecutor(new GambleCommand());
 
         GameShortcutCommand gameShortcut = new GameShortcutCommand();
-        getCommand("mines").setExecutor(gameShortcut);
+        MinesCommand mines = new MinesCommand();
+        getCommand("mines").setExecutor(mines);
+        getCommand("mines").setTabCompleter(mines);
         BlackjackCommand blackjack = new BlackjackCommand();
         getCommand("blackjack").setExecutor(blackjack);
         getCommand("blackjack").setTabCompleter(blackjack);
@@ -511,7 +533,7 @@ public final class Main extends JavaPlugin {
         CoinflipCommand coinflip = new CoinflipCommand();
         getCommand("coinflip").setExecutor(coinflip);
         getCommand("coinflip").setTabCompleter(coinflip);
-        getCommand("plinko").setExecutor(gameShortcut);
+        getCommand("plinko").setExecutor(new me.cobbleBet.commands.PlinkoCommand());
         getCommand("dice").setExecutor(gameShortcut);
         getCommand("crash").setExecutor(gameShortcut);
 
@@ -568,6 +590,7 @@ public final class Main extends JavaPlugin {
     public EconomyManager getEconomyManager() {
         return economyManager;
     }
+    public PluginDataStore getDataStore() { return dataStore; }
     public long getStartedAt() { return startedAt; }
     public long getLastStatusAt() { return lastStatusAt; }
 }

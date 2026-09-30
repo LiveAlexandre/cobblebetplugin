@@ -34,7 +34,7 @@ public final class CoinflipBoardManager implements Listener {
     public void load() {
         clearEntities();
         boards.clear();
-        for (Map<?, ?> map : plugin.getConfig().getMapList("physicalGames.coinflip.boards")) {
+        for (Map<?, ?> map : plugin.getDataStore().getMapList("physicalGames.coinflip.boards")) {
             try {
                 World world = Bukkit.getWorld(String.valueOf(map.get("world")));
                 Style style = Style.parse(String.valueOf(map.get("style")));
@@ -143,7 +143,7 @@ public final class CoinflipBoardManager implements Listener {
     private double number(Object value){return value instanceof Number n?n.doubleValue():Double.parseDouble(String.valueOf(value));}
     private String nextId(){String id;do{id=UUID.randomUUID().toString().substring(0,6).toLowerCase(Locale.ROOT);}while(boards.containsKey(id));return id;}
 
-    private void save(){List<Map<String,Object>> rows=new ArrayList<>();for(BoardView view:boards.values()){Board b=view.board;Map<String,Object> row=new LinkedHashMap<>();row.put("id",b.id);row.put("modelVersion",3);row.put("world",b.location.getWorld().getName());row.put("x",b.location.getX());row.put("y",b.location.getY());row.put("z",b.location.getZ());row.put("yaw",b.location.getYaw());row.put("style",b.style.id);row.put("name",b.name);rows.add(row);}plugin.getConfig().set("physicalGames.coinflip.boards",rows);plugin.getConfig().setComments("physicalGames",List.of("","PHYSICAL GAME BOARDS — managed with /cobblebet game coinflip","Locations and styles are saved here so boards return after restarts."));plugin.saveConfig();}
+    private void save(){List<Map<String,Object>> rows=new ArrayList<>();for(BoardView view:boards.values()){Board b=view.board;Map<String,Object> row=new LinkedHashMap<>();row.put("id",b.id);row.put("modelVersion",3);row.put("world",b.location.getWorld().getName());row.put("x",b.location.getX());row.put("y",b.location.getY());row.put("z",b.location.getZ());row.put("yaw",b.location.getYaw());row.put("style",b.style.id);row.put("name",b.name);rows.add(row);}plugin.getDataStore().set("physicalGames.coinflip.boards",rows);}
 
     @EventHandler public void interact(PlayerInteractEntityEvent event){String id=event.getRightClicked().getPersistentDataContainer().get(boardKey,PersistentDataType.STRING);if(id==null||id.equals("model"))return;event.setCancelled(true);plugin.coinflipController.openLobby(event.getPlayer(),0);}
 
