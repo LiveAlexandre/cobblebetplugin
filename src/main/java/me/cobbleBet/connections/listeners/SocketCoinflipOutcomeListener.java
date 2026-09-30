@@ -29,6 +29,7 @@ public class SocketCoinflipOutcomeListener extends SocketMessageListener {
             Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
                 Player player = Bukkit.getPlayer(playerId);
                 if (player == null) return;
+                Main.getInstance().coinflipController.reveal(player, won, amount, opponent);
                 String result = won ? "won" : "lost";
                 Component message = Component.text("Coinflip: ", NamedTextColor.GOLD)
                         .append(Component.text("You " + result + " " + new DecimalFormat("#,##0.##").format(amount)

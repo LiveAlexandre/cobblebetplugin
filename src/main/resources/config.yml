@@ -142,6 +142,7 @@ websiteCustomization:
       percent: 0.0
     coinflip:
       percent: 0.0
+      maxAmount: 1000000000000.0
     plinko:
       percent: 0.0
     dice:

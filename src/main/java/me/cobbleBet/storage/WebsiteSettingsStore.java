@@ -36,6 +36,10 @@ public final class WebsiteSettingsStore {
             double defaultPercent = 0;
             double percent = config.getDouble(ROOT + ".gameRules." + game + ".percent", defaultPercent);
             rule.addProperty("percent", Double.isFinite(percent) ? Math.round(Math.max(0, Math.min(50, percent)) * 10) / 10.0 : defaultPercent);
+            if (game.equals("coinflip")) {
+                double maximum = config.getDouble(ROOT + ".gameRules.coinflip.maxAmount", 1_000_000_000_000D);
+                rule.addProperty("maxAmount", Double.isFinite(maximum) ? Math.max(.1, Math.min(1_000_000_000_000D, Math.round(maximum * 10) / 10D)) : 1_000_000_000_000D);
+            }
             rules.add(game, rule);
         }
         settings.add("enabledGames", enabled);
@@ -67,6 +71,7 @@ public final class WebsiteSettingsStore {
         for (String game : GAMES) {
             config.set(ROOT + ".enabledGames." + game, settings.getAsJsonObject("enabledGames").get(game).getAsBoolean());
             config.set(ROOT + ".gameRules." + game + ".percent", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("percent").getAsDouble());
+            if (game.equals("coinflip")) config.set(ROOT + ".gameRules.coinflip.maxAmount", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("maxAmount").getAsDouble());
         }
         config.set(ROOT + ".background.image", settings.getAsJsonObject("background").get("image").getAsString());
         config.set(ROOT + ".background.blur", settings.getAsJsonObject("background").get("blur").getAsInt());
@@ -120,6 +125,8 @@ public final class WebsiteSettingsStore {
             if (!Double.isFinite(percent) || percent < 0 || percent > 50) throw new IllegalArgumentException("Invalid game percentage.");
             if (!settings.getAsJsonObject("enabledGames").get(game).getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException("Invalid game availability.");
         }
+        double maximum = settings.getAsJsonObject("gameRules").getAsJsonObject("coinflip").get("maxAmount").getAsDouble();
+        if (!Double.isFinite(maximum) || maximum < .1 || maximum > 1_000_000_000_000D) throw new IllegalArgumentException("Invalid Coinflip maximum.");
         JsonObject background = settings.getAsJsonObject("background");
         double blur = background.get("blur").getAsDouble();
         if (!validImage(background.get("image").getAsString()) || !Double.isFinite(blur) || blur < 0 || blur > 30) throw new IllegalArgumentException("Invalid background.");

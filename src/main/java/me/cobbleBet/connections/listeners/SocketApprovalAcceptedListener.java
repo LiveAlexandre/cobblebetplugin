@@ -14,6 +14,9 @@ public class SocketApprovalAcceptedListener extends SocketMessageListener {
         String sha256 = json.has("pluginSha256") ? json.get("pluginSha256").getAsString() : "";
         plugin.setOfficialPluginRelease(version, jarName, sha256);
         client.markApproved();
-        Bukkit.getScheduler().runTask(plugin, plugin::sendServerStatus);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            plugin.sendServerStatus();
+            if (plugin.coinflipController != null) plugin.coinflipController.requestLobby();
+        });
     }
 }

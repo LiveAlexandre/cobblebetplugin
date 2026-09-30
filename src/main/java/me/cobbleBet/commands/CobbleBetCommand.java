@@ -55,6 +55,29 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             Main.getInstance().menuController.openDashboard(player); return true;
         }
 
+        if (args[0].equalsIgnoreCase("game") || args[0].equalsIgnoreCase("games")) {
+            if (!(sender instanceof Player player)) { sender.sendMessage("§cPhysical games must be managed in-game."); return true; }
+            if (args.length == 1) { Main.getInstance().menuController.openPhysicalGames(player); return true; }
+            if (!args[1].equalsIgnoreCase("coinflip")) { sender.sendMessage("§eUsage: /cobblebet game coinflip"); return true; }
+            if (args.length == 2) { Main.getInstance().menuController.openCoinflipBoards(player); return true; }
+            var boards = Main.getInstance().coinflipBoardManager;
+            if (args[2].equalsIgnoreCase("create")) {
+                String style=args.length>=4?args[3]:"street";
+                String name=args.length>=5?String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)):"COINFLIP";
+                boards.create(player,style,name);return true;
+            }
+            String id=args[2];
+            if(args.length<4){Main.getInstance().menuController.openCoinflipBoard(player,id);return true;}
+            switch(args[3].toLowerCase()){
+                case "movehere"->boards.moveHere(player,id);
+                case "remove"->boards.remove(player,id);
+                case "style"->{if(args.length<5)player.sendMessage("§eUsage: /cobblebet game coinflip "+id+" style <style>");else boards.changeStyle(player,id,args[4]);}
+                case "rename"->{if(args.length<5)player.sendMessage("§eUsage: /cobblebet game coinflip "+id+" rename <name>");else boards.rename(player,id,String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)));}
+                default->player.sendMessage("§eActions: movehere, style <style>, rename <name>, remove");
+            }
+            return true;
+        }
+
         if (args[0].equalsIgnoreCase("panel") || args[0].equalsIgnoreCase("link")) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage("§cRun this command in-game so the private panel link can be sent to you.");
@@ -130,7 +153,7 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        sender.sendMessage("§cUnknown subcommand. Use: reload, panel, or key <approval-key>.");
+        sender.sendMessage("§cUnknown subcommand. Use: game, reload, panel, or key <approval-key>.");
         return true;
     }
 
@@ -148,7 +171,13 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             completions.add("stats"); completions.add("health"); completions.add("settings");
             completions.add("panel");
             completions.add("key");
+            completions.add("game");
         }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("game") || args[0].equalsIgnoreCase("games"))) completions.add("coinflip");
+        if (args.length == 3 && args[1].equalsIgnoreCase("coinflip")) { completions.add("create"); completions.addAll(Main.getInstance().coinflipBoardManager.summaries().stream().map(me.cobbleBet.visuals.CoinflipBoardManager.BoardSummary::id).toList()); }
+        if (args.length == 4 && args[1].equalsIgnoreCase("coinflip") && args[2].equalsIgnoreCase("create")) completions.addAll(Main.getInstance().coinflipBoardManager.styles());
+        if (args.length == 4 && args[1].equalsIgnoreCase("coinflip") && !args[2].equalsIgnoreCase("create")) completions.addAll(List.of("movehere","style","rename","remove"));
+        if (args.length == 5 && args[1].equalsIgnoreCase("coinflip") && args[3].equalsIgnoreCase("style")) completions.addAll(Main.getInstance().coinflipBoardManager.styles());
 
         return completions;
     }

@@ -16,7 +16,8 @@ commands:
     description: Shows players how to open Roulette.
   coinflip:
     aliases: [cf]
-    description: Shows players how to open Coinflip.
+    description: Opens the in-game Coinflip lobby.
+    usage: /coinflip [create <amount>|join <id>|cancel <id>|refresh]
   plinko:
     description: Shows players how to open Plinko.
   dice:

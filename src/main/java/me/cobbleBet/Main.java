@@ -3,6 +3,7 @@ package me.cobbleBet;
 import me.cobbleBet.commands.CobbleBetCommand;
 import me.cobbleBet.commands.GambleCommand;
 import me.cobbleBet.commands.GameShortcutCommand;
+import me.cobbleBet.commands.CoinflipCommand;
 import me.cobbleBet.commands.WalletCommand;
 import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.economy.EconomyManager;
@@ -101,6 +102,8 @@ public final class Main extends JavaPlugin {
     public final ConcurrentHashMap<UUID, Long> pendingAccountLinkRequests = new ConcurrentHashMap<>();
     public GamblingIndicatorManager gamblingIndicatorManager;
     public me.cobbleBet.gui.CobbleMenuController menuController;
+    public me.cobbleBet.gui.CoinflipController coinflipController;
+    public me.cobbleBet.visuals.CoinflipBoardManager coinflipBoardManager;
     private final long startedAt = System.currentTimeMillis();
     private volatile long lastStatusAt;
     private volatile String officialPluginVersion = "";
@@ -124,10 +127,16 @@ public final class Main extends JavaPlugin {
         economyManager = new EconomyManager(this);
         gamblingIndicatorManager = new GamblingIndicatorManager(this);
         menuController = new me.cobbleBet.gui.CobbleMenuController(this);
+        coinflipController = new me.cobbleBet.gui.CoinflipController(this);
+        coinflipBoardManager = new me.cobbleBet.visuals.CoinflipBoardManager(this);
         registerCommands();
         getServer().getPluginManager().registerEvents(menuController, this);
+        getServer().getPluginManager().registerEvents(coinflipController, this);
+        getServer().getPluginManager().registerEvents(coinflipBoardManager, this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
+        coinflipBoardManager.load();
         connectSocket();
+        Bukkit.getScheduler().runTaskTimer(this, () -> coinflipController.requestLobby(), 20L * 15, 20L * 15);
         startStatusUpdates();
         prepareInstalledUpdateNotice();
         startUpdateReminders();
@@ -150,6 +159,7 @@ public final class Main extends JavaPlugin {
         if (gamblingIndicatorManager != null) {
             gamblingIndicatorManager.clearAll();
         }
+        if (coinflipBoardManager != null) coinflipBoardManager.clearAll();
     }
 
     // =========================
@@ -484,7 +494,9 @@ public final class Main extends JavaPlugin {
         getCommand("mines").setExecutor(gameShortcut);
         getCommand("blackjack").setExecutor(gameShortcut);
         getCommand("roulette").setExecutor(gameShortcut);
-        getCommand("coinflip").setExecutor(gameShortcut);
+        CoinflipCommand coinflip = new CoinflipCommand();
+        getCommand("coinflip").setExecutor(coinflip);
+        getCommand("coinflip").setTabCompleter(coinflip);
         getCommand("plinko").setExecutor(gameShortcut);
         getCommand("dice").setExecutor(gameShortcut);
         getCommand("crash").setExecutor(gameShortcut);
