@@ -40,7 +40,7 @@ public final class BlackjackTableManager implements Listener {
                 PlayMode mode = PlayMode.parse(String.valueOf(map.get("playMode")));
                 if (world == null || style == null) continue;
                 if (mode == null) mode = PlayMode.GUI;
-                float yaw = Math.round((float) number(map.get("yaw")) / 90f) * 90f;
+                float yaw = Math.round((float) number(map.get("yaw")) / 22.5f) * 22.5f;
                 boolean glowing = Boolean.parseBoolean(String.valueOf(map.get("glowing")));
                 spawn(new Table(String.valueOf(map.get("id")), new Location(world, number(map.get("x")), number(map.get("y")), number(map.get("z")), yaw, 0), style, mode, String.valueOf(map.get("name")), glowing));
             } catch (RuntimeException error) {
@@ -81,6 +81,11 @@ public final class BlackjackTableManager implements Listener {
     public boolean rotate(Player player, String id, int quarterTurns) {
         View view = available(player, id); if (view == null) return false;
         Location location = view.table.location.clone(); location.setYaw(Math.round((location.getYaw() + quarterTurns * 90f) / 90f) * 90f);
+        replace(view, new Table(view.table.id, location, view.table.style, view.table.mode, view.table.name, view.table.glowing)); return true;
+    }
+    public boolean rotateByDegrees(Player player, String id, float degrees) {
+        View view = available(player, id); if (view == null) return false;
+        Location location = view.table.location.clone(); location.setYaw(Math.round((location.getYaw() + degrees) / 22.5f) * 22.5f);
         replace(view, new Table(view.table.id, location, view.table.style, view.table.mode, view.table.name, view.table.glowing)); return true;
     }
     public boolean rename(Player player, String id, String name) {
@@ -208,7 +213,7 @@ public final class BlackjackTableManager implements Listener {
     private String cleanName(String name) { return name == null || name.isBlank() ? "BLACKJACK" : name.substring(0, Math.min(28, name.length())); }
     private void clearDynamic(View view) { view.dynamic.forEach(this::removeEntity); view.dynamic.clear(); }
     private void removeEntity(Entity entity) { if (entity != null && !entity.isDead()) entity.remove(); }
-    private Location placement(Player player) { Location location = player.getLocation().clone(); location.setPitch(0); location.setYaw(Math.round(location.getYaw() / 90f) * 90f); location.add(direction(location.getYaw()).multiply(3)); location.setY(Math.floor(location.getY()) + .03); return location; }
+    private Location placement(Player player) { Location location = player.getLocation().clone(); location.setPitch(0); location.setYaw(Math.round(location.getYaw() / 22.5f) * 22.5f); location.add(direction(location.getYaw()).multiply(3)); location.setY(Math.floor(location.getY()) + .03); return location; }
     private Location point(Location origin, double right, double up, double forward) { double radians = Math.toRadians(origin.getYaw()); return origin.clone().add(-Math.cos(radians) * right + Math.sin(radians) * forward, up, -Math.sin(radians) * right - Math.cos(radians) * forward); }
     private org.bukkit.util.Vector direction(float yaw) { double radians = Math.toRadians(yaw); return new org.bukkit.util.Vector(-Math.sin(radians), 0, Math.cos(radians)); }
     private double number(Object value) { return value instanceof Number n ? n.doubleValue() : Double.parseDouble(String.valueOf(value)); }

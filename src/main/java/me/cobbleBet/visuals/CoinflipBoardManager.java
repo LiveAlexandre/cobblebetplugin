@@ -67,6 +67,14 @@ public final class CoinflipBoardManager implements Listener {
         player.sendMessage("§aMoved board §f" + view.board.id + " §ato your position."); return true;
     }
 
+    public boolean rotateByDegrees(Player player, String id, float degrees) {
+        BoardView view = find(id); if (view == null) return missing(player, id);
+        Location location = view.board.location.clone();
+        location.setYaw(Math.round((location.getYaw() + degrees) / 22.5f) * 22.5f);
+        respawn(view, new Board(view.board.id, location, view.board.style, view.board.name));
+        return true;
+    }
+
     public boolean changeStyle(Player player, String id, String styleName) {
         BoardView view = find(id); if (view == null) return missing(player, id);
         Style style = Style.parse(styleName);

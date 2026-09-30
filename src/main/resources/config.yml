@@ -82,7 +82,13 @@ broadcastPrefix: "<gradient:#00ff88:#00c3ff><bold>CobbleBet</bold></gradient> <d
 # Controls what gets broadcasted
 broadcastEvents:
   bigWin: true
+  gambleReminder: false
   jackpot: true
+
+# Optional chat reminder for players. Enable it from /cobblebet > Server settings > Broadcasts.
+broadcastReminder:
+  intervalMinutes: 15
+  message: "<aqua>Feeling lucky?</aqua> <yellow>Use <bold>/gamble</bold> to play CobbleBet!</yellow>"
 
 
 # Minimum win amount required for broadcast

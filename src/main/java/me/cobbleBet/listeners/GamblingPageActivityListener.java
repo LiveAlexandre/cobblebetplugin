@@ -1,5 +1,6 @@
 package me.cobbleBet.listeners;
 
+import me.cobbleBet.Main;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -29,6 +30,9 @@ public final class GamblingPageActivityListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         manager.onPlayerJoin(event.getPlayer());
+        Player player = event.getPlayer();
+        Main plugin = Main.getInstance();
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> plugin.notifyAdminAboutPluginUpdate(player), 40L);
     }
 
     @EventHandler
