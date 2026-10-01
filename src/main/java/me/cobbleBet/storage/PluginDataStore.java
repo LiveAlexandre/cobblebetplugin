@@ -21,7 +21,8 @@ public final class PluginDataStore {
             "updater.pendingVersion",
             "physicalGames.coinflip.boards",
             "physicalGames.blackjack.tables",
-            "physicalGames.mines.fields"
+            "physicalGames.mines.fields",
+            "physicalGames.roulette.tables"
     );
 
     private final Main plugin;

@@ -32,6 +32,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketBlackjackEventListener("blackjackEvent", client));
         listeners.add(new SocketMinesEventListener("minesEvent", client));
         listeners.add(new SocketPlinkoEventListener("plinkoEvent", client));
+        listeners.add(new SocketRouletteEventListener("rouletteEvent", client));
         listeners.add(new SocketSetEconomyListener("setEconomy", client));
         listeners.add(new SocketSetPermissionRequirementsListener("setPermissionRequirements", client));
         listeners.add(new SocketSetBroadcastSettingsListener("setBroadcastSettings", client));

@@ -116,6 +116,8 @@ public final class Main extends JavaPlugin {
     public me.cobbleBet.visuals.MinesFieldManager minesFieldManager;
     public me.cobbleBet.gui.PlinkoController plinkoController;
     public me.cobbleBet.visuals.PlinkoBoardManager plinkoBoardManager;
+    public me.cobbleBet.gui.RouletteController rouletteController;
+    public me.cobbleBet.visuals.RouletteTableManager rouletteTableManager;
     private final long startedAt = System.currentTimeMillis();
     private volatile long lastStatusAt;
     private volatile String officialPluginVersion = "";
@@ -150,6 +152,8 @@ public final class Main extends JavaPlugin {
         minesFieldManager = new me.cobbleBet.visuals.MinesFieldManager(this);
         plinkoController = new me.cobbleBet.gui.PlinkoController(this);
         plinkoBoardManager = new me.cobbleBet.visuals.PlinkoBoardManager(this);
+        rouletteController = new me.cobbleBet.gui.RouletteController(this);
+        rouletteTableManager = new me.cobbleBet.visuals.RouletteTableManager(this);
         registerCommands();
         getServer().getPluginManager().registerEvents(menuController, this);
         getServer().getPluginManager().registerEvents(coinflipController, this);
@@ -160,11 +164,14 @@ public final class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(minesFieldManager, this);
         getServer().getPluginManager().registerEvents(plinkoController, this);
         getServer().getPluginManager().registerEvents(plinkoBoardManager, this);
+        getServer().getPluginManager().registerEvents(rouletteController, this);
+        getServer().getPluginManager().registerEvents(rouletteTableManager, this);
         getServer().getPluginManager().registerEvents(new me.cobbleBet.listeners.GamblingPageActivityListener(gamblingIndicatorManager), this);
         coinflipBoardManager.load();
         blackjackTableManager.load();
         minesFieldManager.load();
         plinkoBoardManager.load();
+        rouletteTableManager.load();
         connectSocket();
         Bukkit.getScheduler().runTaskTimer(this, () -> coinflipController.requestLobby(), 20L * 15, 20L * 15);
         startStatusUpdates();
@@ -194,6 +201,7 @@ public final class Main extends JavaPlugin {
         if (blackjackTableManager != null) blackjackTableManager.clearAll();
         if (minesFieldManager != null) minesFieldManager.clearAll();
         if (plinkoBoardManager != null) plinkoBoardManager.clearAll();
+        if (rouletteTableManager != null) rouletteTableManager.clearAll();
     }
 
     // =========================
@@ -588,7 +596,7 @@ public final class Main extends JavaPlugin {
         BlackjackCommand blackjack = new BlackjackCommand();
         getCommand("blackjack").setExecutor(blackjack);
         getCommand("blackjack").setTabCompleter(blackjack);
-        getCommand("roulette").setExecutor(gameShortcut);
+        getCommand("roulette").setExecutor(new me.cobbleBet.commands.RouletteCommand());
         CoinflipCommand coinflip = new CoinflipCommand();
         getCommand("coinflip").setExecutor(coinflip);
         getCommand("coinflip").setTabCompleter(coinflip);

@@ -8,7 +8,7 @@ CobbleBet connects a Paper server economy to browser-based games and physical ga
 
 - Mines, Blackjack, Roulette, Coinflip, Plinko, Dice, and Crash
 - Browser games connected to the player's live server balance
-- Physical Coinflip, Mines, Blackjack, and Plinko boards that can be placed in the world
+- Physical Coinflip, Mines, Blackjack, Plinko, and Roulette games that can be placed in the world
 - Vault economies and item-based economies
 - In-game menus for players and server owners
 - Per-game availability, limits, and extra house edge settings
@@ -50,7 +50,8 @@ Configuration is stored in `plugins/CobbleBet/`. Settings changed through the ow
 | `/mines` | Opens the in-game Mines interface. |
 | `/blackjack` or `/bj` | Opens the in-game Blackjack interface. |
 | `/plinko` | Explains how to use a physical Plinko board. |
-| `/roulette`, `/dice`, `/crash` | Directs the player to `/gamble`. |
+| `/roulette` | Opens the in-game Roulette betting board. |
+| `/dice`, `/crash` | Directs the player to `/gamble`. |
 | `/cobblebet` | Opens the server owner menu and shows the installed plugin version. |
 | `/cobblebet stats` | Opens server and game statistics. |
 | `/cobblebet panel` | Sends the owner a private link to the server panel. |
@@ -81,12 +82,13 @@ CobbleBet uses a configured Minecraft material, such as diamonds. Deposits can t
 
 ## Physical games
 
-Server owners can place Coinflip boards, Mines fields, Blackjack tables, and Plinko boards in the world. Each model has placement and rotation controls, multiple styles, and persistent storage.
+Server owners can place Coinflip boards, Mines fields, Blackjack tables, Plinko boards, and Roulette tables in the world. Each model has placement and rotation controls, multiple styles, and persistent storage.
 
 - Mines supports horizontal and vertical layouts, with GUI or world play modes.
 - Blackjack supports GUI and world play modes.
 - Plinko is played directly from its world board.
 - Coinflip boards show open matches from the current server.
+- Roulette uses a square table with color and number bets, an animated wheel, and server-authoritative payouts.
 
 Use `/cobblebet game` to manage them without memorizing the full command syntax.
 
@@ -111,4 +113,3 @@ The compiled plugin is written to `build/libs/`.
 - Setup and configuration: [cobblebet.com/docs](https://cobblebet.com/docs)
 - Questions and bug reports: [CobbleBet Discord](https://discord.gg/r6Xfyedn4j)
 - Source code: [github.com/LiveAlexandre/cobblebetplugin](https://github.com/LiveAlexandre/cobblebetplugin/)
-

@@ -15,7 +15,8 @@ commands:
     description: Opens the in-game Blackjack table.
     usage: /blackjack [bet <amount>|hit|stand|double]
   roulette:
-    description: Shows players how to open Roulette.
+    description: Opens the in-game Roulette table.
+    usage: /roulette
   coinflip:
     aliases: [cf]
     description: Opens the in-game Coinflip lobby.
