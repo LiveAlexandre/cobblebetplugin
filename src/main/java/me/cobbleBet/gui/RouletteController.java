@@ -41,6 +41,7 @@ public final class RouletteController implements Listener {
             return;
         }
         physicalTables.put(player.getUniqueId(), tableId);
+        if (plugin.gamblingIndicatorManager != null) plugin.gamblingIndicatorManager.expectPhysicalReveal(player.getUniqueId(), "roulette", 100L);
         if (!request(player, "open", null)) { cancelPhysical(player.getUniqueId()); return; }
         openBetMenu(player);
     }
@@ -49,14 +50,16 @@ public final class RouletteController implements Listener {
         State state = states.computeIfAbsent(player.getUniqueId(), ignored -> new State());
         state.spinning = false;
         RouletteHolder holder = new RouletteHolder(Kind.BET);
-        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Roulette • Choose your bet", NamedTextColor.DARK_GREEN));
+        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Roulette • Set your stake", NamedTextColor.DARK_GREEN));
         holder.inventory = inventory;
-        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        fill(inventory, Material.BLACK_STAINED_GLASS_PANE);
+        inventory.setItem(4, item(Material.GOLD_INGOT, "Balance " + MONEY.format(state.balance), NamedTextColor.GOLD,
+                "Choose a stake, then place your bet."));
         double[] amounts = {10, 50, 100, 500, 1000};
         int[] slots = {10, 11, 12, 13, 14};
         for (int index = 0; index < amounts.length; index++)
             inventory.setItem(slots[index], item(Material.GOLD_NUGGET, MONEY.format(amounts[index]), NamedTextColor.GOLD, "Place a Roulette bet for this amount."));
-        inventory.setItem(16, item(Material.NAME_TAG, "Custom bet", NamedTextColor.AQUA, "Type an amount in chat."));
+        inventory.setItem(16, item(Material.NAME_TAG, "Custom stake", NamedTextColor.AQUA, "Type an amount in chat."));
         inventory.setItem(22, item(Material.BARRIER, "Close", NamedTextColor.RED));
         player.openInventory(inventory);
     }
@@ -67,7 +70,7 @@ public final class RouletteController implements Listener {
         RouletteHolder holder = new RouletteHolder(Kind.BOARD);
         Inventory inventory = Bukkit.createInventory(holder, 54, Component.text("Roulette • Bet " + MONEY.format(state.bet), NamedTextColor.DARK_GREEN));
         holder.inventory = inventory;
-        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        fill(inventory, Material.BLACK_STAINED_GLASS_PANE);
         putChoice(inventory, holder, 1, Material.RED_CONCRETE, "Red", "color:red", NamedTextColor.RED, "Pays 37/18× before extra house edge.");
         putChoice(inventory, holder, 4, Material.BLACK_CONCRETE, "Black", "color:black", NamedTextColor.WHITE, "Pays 37/18× before extra house edge.");
         putChoice(inventory, holder, 7, Material.LIME_CONCRETE, "Green", "color:green", NamedTextColor.GREEN, "Wins only when the wheel lands on 0. Pays 37×.");
@@ -79,6 +82,8 @@ public final class RouletteController implements Listener {
         }
         putChoice(inventory, holder, 49, Material.LIME_STAINED_GLASS_PANE, "0", "number:0", NamedTextColor.GREEN, "Pays 37× before extra house edge.");
         inventory.setItem(45, item(Material.ARROW, "Change bet", NamedTextColor.YELLOW, "Current bet: " + MONEY.format(state.bet)));
+        inventory.setItem(47, item(Material.GOLD_INGOT, "Stake " + MONEY.format(state.bet), NamedTextColor.GOLD,
+                "Pick a color or an exact number."));
         inventory.setItem(53, item(Material.BARRIER, "Close", NamedTextColor.RED));
         player.openInventory(inventory);
     }
@@ -165,7 +170,7 @@ public final class RouletteController implements Listener {
         RouletteHolder holder = new RouletteHolder(Kind.RESULT);
         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Roulette • Spinning", NamedTextColor.GOLD));
         holder.inventory = inventory;
-        fill(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        fill(inventory, Material.BLACK_STAINED_GLASS_PANE);
         int[] ring = {9,10,11,12,13,14,15,16,17};
         for (int slot : ring) inventory.setItem(slot, item(Material.BLACK_STAINED_GLASS_PANE, " ", NamedTextColor.GRAY));
         player.openInventory(inventory);
@@ -184,7 +189,9 @@ public final class RouletteController implements Listener {
                 inventory.setItem(22, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
                         won ? "YOU WIN " + MONEY.format(payout) : "NO WIN", won ? NamedTextColor.GREEN : NamedTextColor.RED,
                         "Result: " + result + " " + color.toUpperCase(Locale.ROOT), "Balance: " + MONEY.format(balance)));
-                inventory.setItem(18, item(Material.ARROW, "Play again", NamedTextColor.YELLOW));
+                inventory.setItem(18, item(Material.LIME_DYE, "Bet again", NamedTextColor.GREEN,
+                        "Use the same " + MONEY.format(states.getOrDefault(player.getUniqueId(), new State()).bet) + " stake."));
+                inventory.setItem(20, item(Material.GOLD_NUGGET, "Change stake", NamedTextColor.YELLOW));
                 inventory.setItem(26, item(Material.BARRIER, "Close", NamedTextColor.RED));
                 player.playSound(player.getLocation(), won ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, .8f, won ? 1.25f : .72f);
                 cancel();
@@ -212,7 +219,8 @@ public final class RouletteController implements Listener {
             if (choice != null) spin(player, choice);
             else if (slot == 45) openBetMenu(player);
             else if (slot == 53) { cancelPhysical(player.getUniqueId()); player.closeInventory(); }
-        } else if (slot == 18) openBetMenu(player);
+        } else if (slot == 18) openBoard(player);
+        else if (slot == 20) openBetMenu(player);
         else if (slot == 26) player.closeInventory();
     }
 
@@ -249,7 +257,7 @@ public final class RouletteController implements Listener {
     }
 
     private boolean validBet(double amount) { return Double.isFinite(amount) && amount >= .1 && amount <= 1e12 && Math.abs(amount * 10 - Math.round(amount * 10)) <= .001; }
-    private void cancelPhysical(UUID uuid) { String table = physicalTables.remove(uuid); if (table != null) plugin.rouletteTableManager.cancel(table, uuid); }
+    private void cancelPhysical(UUID uuid) { String table = physicalTables.remove(uuid); if (plugin.gamblingIndicatorManager != null) plugin.gamblingIndicatorManager.cancelPhysicalReveal(uuid); if (table != null) plugin.rouletteTableManager.cancel(table, uuid); }
     private void putChoice(Inventory inventory, RouletteHolder holder, int slot, Material material, String name, String value, NamedTextColor color, String... lore) { inventory.setItem(slot, item(material, name, color, lore)); holder.choices.put(slot, value); }
     private void fill(Inventory inventory, Material material) { ItemStack pane = item(material, " ", NamedTextColor.GRAY); for (int slot = 0; slot < inventory.getSize(); slot++) inventory.setItem(slot, pane); }
     private ItemStack item(Material material, String name, NamedTextColor color, String... lore) { ItemStack stack = new ItemStack(material); ItemMeta meta = stack.getItemMeta(); meta.displayName(Component.text(name, color).decoration(TextDecoration.ITALIC, false)); if (lore.length > 0) meta.lore(Arrays.stream(lore).map(line -> Component.text(line, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)).toList()); stack.setItemMeta(meta); return stack; }

@@ -49,9 +49,13 @@ public class SocketGambleResultListener extends SocketMessageListener {
             if (!game.matches("[a-z0-9_-]{0,24}")) game = "";
             final String resultGame = game;
             Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
-                if (Main.getInstance().gamblingIndicatorManager != null) {
-                    Main.getInstance().gamblingIndicatorManager.showResult(playerId, won, amount, currency, payoutMultiplier, resultGame);
-                }
+                if (Main.getInstance().gamblingIndicatorManager == null) return;
+                long delay = Main.getInstance().gamblingIndicatorManager.takePhysicalRevealDelay(playerId, resultGame);
+                Bukkit.getScheduler().runTaskLater(Main.getInstance(), () -> {
+                    if (Main.getInstance().gamblingIndicatorManager != null) {
+                        Main.getInstance().gamblingIndicatorManager.showResult(playerId, won, amount, currency, payoutMultiplier, resultGame);
+                    }
+                }, delay);
             });
         } catch (IllegalArgumentException | UnsupportedOperationException e) {
             // Ignore malformed or incomplete gambling result messages.

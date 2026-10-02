@@ -67,6 +67,13 @@ public final class CoinflipBoardManager implements Listener {
         player.sendMessage("§aMoved board §f" + view.board.id + " §ato your position."); return true;
     }
 
+    public boolean moveThere(Player player, String id) {
+        BoardView view = find(id); if (view == null) return missing(player, id);
+        Location location = targetPlacement(player); if (location == null) { player.sendMessage("§cLook at a block within 30 blocks."); return false; }
+        respawn(view, new Board(view.board.id, location, view.board.style, view.board.name));
+        player.sendMessage("§aMoved board §f" + view.board.id + " §ato the targeted block."); return true;
+    }
+
     public boolean rotateByDegrees(Player player, String id, float degrees) {
         BoardView view = find(id); if (view == null) return missing(player, id);
         Location location = view.board.location.clone();
@@ -144,7 +151,9 @@ public final class CoinflipBoardManager implements Listener {
     private BlockDisplay block(World world,Location center,float yaw,Material material,float width,float height,float depth){return world.spawn(center,BlockDisplay.class,e->{e.setBlock(material.createBlockData());e.setRotation(yaw,0);e.setPersistent(false);e.setViewRange(1.5f);e.setTransformation(new Transformation(new Vector3f(-width/2,-height/2,-depth/2),new Quaternionf(),new Vector3f(width,height,depth),new Quaternionf()));});}
     private ItemDisplay decoration(World world,Location target,float yaw,Material material,boolean left){return world.spawn(target,ItemDisplay.class,display->{display.setItemStack(new ItemStack(material));display.setBillboard(Display.Billboard.FIXED);display.setRotation(yaw,0);display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);display.setPersistent(false);display.setViewRange(1.5f);display.setTransformation(new Transformation(new Vector3f(),new Quaternionf().rotateZ((float)Math.toRadians(left?-9:9)),new Vector3f(.42f),new Quaternionf()));display.getPersistentDataContainer().set(boardKey,PersistentDataType.STRING,"model");});}
     private TextDisplay text(World world,Location location,float yaw,Color background,float scale){return world.spawn(location,TextDisplay.class,e->{e.setBillboard(Display.Billboard.FIXED);e.setRotation(yaw,0);e.setAlignment(TextDisplay.TextAlignment.CENTER);e.setBackgroundColor(background);e.setShadowed(true);e.setSeeThrough(false);e.setLineWidth(340);e.setPersistent(false);e.setTransformation(new Transformation(new Vector3f(),new Quaternionf(),new Vector3f(scale),new Quaternionf()));});}
-    private Location placement(Player player){Location location=player.getLocation().clone();location.setPitch(0);location.setYaw(snapYaw(location.getYaw()));location.add(direction(location.getYaw()).multiply(3));location.setY(Math.floor(location.getY())+.03);return location;}
+    private Location placement(Player player){Location location=player.getLocation().clone();location.setPitch(0);location.setYaw(snapYaw(location.getYaw()));location.setY(Math.floor(location.getY())+.03);return location;}
+    private Location targetPlacement(Player player){var target=player.getTargetBlockExact(30,org.bukkit.FluidCollisionMode.NEVER);if(target==null)return null;Location location=target.getLocation().add(.5,1.03,.5);location.setYaw(snapYaw(facingYaw(location,player.getLocation())));return location;}
+    private float facingYaw(Location from,Location to){return(float)Math.toDegrees(Math.atan2(-(to.getX()-from.getX()),to.getZ()-from.getZ()));}
     private Location point(Location origin,double right,double up,double forward){double r=Math.toRadians(origin.getYaw());return origin.clone().add(-Math.cos(r)*right+Math.sin(r)*forward,up,-Math.sin(r)*right-Math.cos(r)*forward);}
     private org.bukkit.util.Vector direction(float yaw){double r=Math.toRadians(yaw);return new org.bukkit.util.Vector(-Math.sin(r),0,Math.cos(r));}
     private float snapYaw(float yaw){return Math.round(yaw/22.5f)*22.5f;}

@@ -29,6 +29,7 @@ commands:
     description: Shows players how to open Crash.
   wallet:
   cobblebet:
+    aliases: [cobble]
 permissions:
   cobblebet.admin:
     description: Manage CobbleBet settings and receive plugin update notices.

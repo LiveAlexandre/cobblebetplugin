@@ -103,6 +103,22 @@ debug:
   testMode: false
 
 # ----------------------------------------
+# SERVER EVENTS
+# ----------------------------------------
+
+events:
+  wanderingGambler:
+    enabled: true
+    # Chance checked once every 30 seconds while at least one eligible player is inside a village.
+    # 2.5% gives an average wait of about 20 minutes.
+    chancePercent: 2.5
+    timingVersion: 2
+    # How long the Mysterious Gambler remains before leaving.
+    durationMinutes: 5
+    # Minimum delay before the same player can trigger this event again.
+    cooldownMinutes: 30
+
+# ----------------------------------------
 # IN-GAME GAMBLING VISUALS
 # ----------------------------------------
 # Quality options: low, balanced, high

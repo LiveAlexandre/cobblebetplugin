@@ -35,6 +35,7 @@ public final class PlinkoController implements Listener {
     public void openPhysical(Player player, String boardId) {
         if (!plugin.requireGameEnabled(player, "plinko")) { plugin.plinkoBoardManager.cancel(boardId, player.getUniqueId()); return; }
         physicalBoards.put(player.getUniqueId(), boardId);
+        if (plugin.gamblingIndicatorManager != null) plugin.gamblingIndicatorManager.expectPhysicalReveal(player.getUniqueId(), "plinko", 180L);
         if (!request(player, "open", null)) { cancelPhysical(player.getUniqueId()); return; }
         State state = states.computeIfAbsent(player.getUniqueId(), ignored -> new State());
         plugin.plinkoBoardManager.prepare(boardId, player.getUniqueId(), state.rows, state.risk);
@@ -178,7 +179,7 @@ public final class PlinkoController implements Listener {
         }).buildConversation(player).begin();
     }
 
-    private void cancelPhysical(UUID player) { String board = physicalBoards.remove(player); if (board != null) plugin.plinkoBoardManager.cancel(board, player); }
+    private void cancelPhysical(UUID player) { String board = physicalBoards.remove(player); if (plugin.gamblingIndicatorManager != null) plugin.gamblingIndicatorManager.cancelPhysicalReveal(player); if (board != null) plugin.plinkoBoardManager.cancel(board, player); }
     private void fill(Inventory inventory, Material material) { ItemStack pane = item(material, " ", NamedTextColor.GRAY); for (int slot = 0; slot < inventory.getSize(); slot++) inventory.setItem(slot, pane); }
     private boolean validBet(double value) { return Double.isFinite(value) && value >= .1 && value <= 1e12 && Math.abs(value * 10 - Math.round(value * 10)) <= .001; }
     private ItemStack selectedStake(boolean selected, double amount) { return item(selected ? Material.EMERALD : Material.GOLD_INGOT, MONEY.format(amount), selected ? NamedTextColor.GREEN : NamedTextColor.GOLD, selected ? "Selected stake per ball" : "Click to select this stake."); }

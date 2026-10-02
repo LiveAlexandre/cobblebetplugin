@@ -64,6 +64,12 @@ public final class BlackjackTableManager implements Listener {
         replace(view, new Table(view.table.id, placement(player), view.table.style, view.table.mode, view.table.name, view.table.glowing));
         player.sendMessage("§aMoved Blackjack table §f" + id + "§a."); return true;
     }
+    public boolean moveThere(Player player, String id) {
+        View view = available(player, id); if (view == null) return false;
+        Location location = targetPlacement(player); if (location == null) { player.sendMessage("§cLook at a block within 30 blocks."); return false; }
+        replace(view, new Table(view.table.id, location, view.table.style, view.table.mode, view.table.name, view.table.glowing));
+        player.sendMessage("§aMoved Blackjack table §f" + id + " §ato the targeted block."); return true;
+    }
     public boolean changeStyle(Player player, String id, String value) {
         View view = available(player, id); Style style = Style.parse(value); if (view == null) return false;
         if (style == null) { player.sendMessage("§cUnknown style. Choose: " + String.join(", ", styles())); return false; }
@@ -119,7 +125,10 @@ public final class BlackjackTableManager implements Listener {
     }
 
     public void finish(String id, UUID player, List<BlackjackController.Card> playerHand, List<BlackjackController.Card> dealerHand, int playerTotal, int dealerTotal, String result) {
-        update(id, player, playerHand, dealerHand, playerTotal, dealerTotal, false, result);
+        update(id, player, playerHand, dealerHand, playerTotal, dealerTotal, false, "DEALER REVEAL");
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.equals(activePlayers.get(id))) update(id, player, playerHand, dealerHand, playerTotal, dealerTotal, false, result);
+        }, 14L);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.equals(activePlayers.get(id))) { activePlayers.remove(id); View view = find(id); if (view != null) reset(view); }
         }, 160L);
@@ -213,7 +222,9 @@ public final class BlackjackTableManager implements Listener {
     private String cleanName(String name) { return name == null || name.isBlank() ? "BLACKJACK" : name.substring(0, Math.min(28, name.length())); }
     private void clearDynamic(View view) { view.dynamic.forEach(this::removeEntity); view.dynamic.clear(); }
     private void removeEntity(Entity entity) { if (entity != null && !entity.isDead()) entity.remove(); }
-    private Location placement(Player player) { Location location = player.getLocation().clone(); location.setPitch(0); location.setYaw(Math.round(location.getYaw() / 22.5f) * 22.5f); location.add(direction(location.getYaw()).multiply(3)); location.setY(Math.floor(location.getY()) + .03); return location; }
+    private Location placement(Player player) { Location location = player.getLocation().clone(); location.setPitch(0); location.setYaw(Math.round(location.getYaw() / 22.5f) * 22.5f); location.setY(Math.floor(location.getY()) + .03); return location; }
+    private Location targetPlacement(Player player) { var target = player.getTargetBlockExact(30, org.bukkit.FluidCollisionMode.NEVER); if (target == null) return null; Location location = target.getLocation().add(.5, 1.03, .5); location.setYaw(Math.round(facingYaw(location, player.getLocation()) / 22.5f) * 22.5f); return location; }
+    private float facingYaw(Location from, Location to) { return (float) Math.toDegrees(Math.atan2(-(to.getX() - from.getX()), to.getZ() - from.getZ())); }
     private Location point(Location origin, double right, double up, double forward) { double radians = Math.toRadians(origin.getYaw()); return origin.clone().add(-Math.cos(radians) * right + Math.sin(radians) * forward, up, -Math.sin(radians) * right - Math.cos(radians) * forward); }
     private org.bukkit.util.Vector direction(float yaw) { double radians = Math.toRadians(yaw); return new org.bukkit.util.Vector(-Math.sin(radians), 0, Math.cos(radians)); }
     private double number(Object value) { return value instanceof Number n ? n.doubleValue() : Double.parseDouble(String.valueOf(value)); }

@@ -56,6 +56,7 @@ public final class GamblingIndicatorManager {
     private final Map<UUID, Long> webPages = new HashMap<>();
     private final Map<UUID, Long> lastMovementAt = new HashMap<>();
     private final Map<UUID, BukkitTask> pendingIdleChecks = new HashMap<>();
+    private final Map<UUID, PhysicalReveal> physicalReveals = new HashMap<>();
     private final BukkitTask animationLoop;
     private long ticks;
     private long retryAfter;
@@ -142,6 +143,7 @@ public final class GamblingIndicatorManager {
     public void onPlayerQuit(Player player) {
         UUID id = player.getUniqueId();
         clear(id);
+        physicalReveals.remove(id);
         webPages.remove(id);
         lastMovementAt.remove(id);
         cancelIdleCheck(id);
@@ -201,6 +203,22 @@ public final class GamblingIndicatorManager {
         play(player, won ? Sound.BLOCK_NOTE_BLOCK_BELL : Sound.BLOCK_NOTE_BLOCK_HARP, won ? 1.0f : 0.65f, 1.0f);
     }
 
+    public void expectPhysicalReveal(UUID playerId, String game, long delayTicks) {
+        if (playerId == null || game == null || game.isBlank()) return;
+        physicalReveals.put(playerId, new PhysicalReveal(game.toLowerCase(Locale.ROOT), Math.max(0, delayTicks), System.currentTimeMillis() + 600_000L));
+    }
+
+    public long takePhysicalRevealDelay(UUID playerId, String game) {
+        PhysicalReveal reveal = physicalReveals.remove(playerId);
+        if (reveal == null || reveal.expiresAt < System.currentTimeMillis()) return 0;
+        String normalized = game == null ? "" : game.toLowerCase(Locale.ROOT);
+        return reveal.game.equals(normalized) ? reveal.delayTicks : 0;
+    }
+
+    public void cancelPhysicalReveal(UUID playerId) {
+        if (playerId != null) physicalReveals.remove(playerId);
+    }
+
     public void clearAll() {
         animationLoop.cancel();
         for (UUID playerId : indicators.keySet().toArray(UUID[]::new)) clear(playerId);
@@ -208,6 +226,7 @@ public final class GamblingIndicatorManager {
         lastMovementAt.clear();
         for (BukkitTask task : pendingIdleChecks.values()) task.cancel();
         pendingIdleChecks.clear();
+        physicalReveals.clear();
     }
 
     private void scheduleIdleIndicator(UUID playerId) {
@@ -583,6 +602,8 @@ public final class GamblingIndicatorManager {
         while (value >= 1000 && unit < UNITS.length - 1) { value /= 1000; unit++; }
         return SHORT_NUMBER.format(value) + UNITS[unit];
     }
+
+    private record PhysicalReveal(String game, long delayTicks, long expiresAt) {}
 
     private static final class Result {
         final boolean won;
