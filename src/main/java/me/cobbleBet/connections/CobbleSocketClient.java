@@ -9,6 +9,7 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CobbleSocketClient extends WebSocketClient {
 
@@ -16,10 +17,12 @@ public class CobbleSocketClient extends WebSocketClient {
     private volatile boolean approved;
     private volatile boolean approvalRejected;
     private volatile boolean stopping;
+    private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
 
     public CobbleSocketClient() throws URISyntaxException {
         super(Main.testMode ? new URI("ws://localhost:8908/mc") : new URI("wss://cobblebet.com/mc"));
         this.socketMessageHandler = new SocketMessageHandler(this);
+        setConnectionLostTimeout(45);
     }
 
     @Override
@@ -61,6 +64,7 @@ public class CobbleSocketClient extends WebSocketClient {
     public void onClose(int code, String reason, boolean remote) {
         approved = false;
         if (stopping) return;
+        if (Main.getInstance().cobbleSocketClient != this) return;
         if (approvalRejected) {
             Main.getInstance().getLogger().warning("CobbleBet rejected this plugin connection. Check cobblebetToken in config.yml; reconnecting is paused until the server restarts.");
             return;
@@ -109,8 +113,11 @@ public class CobbleSocketClient extends WebSocketClient {
     }
 
     public void scheduleReconnect() {
+        if (!reconnectScheduled.compareAndSet(false, true)) return;
         Bukkit.getScheduler().runTaskLater(Main.getInstance(), () -> {
+            reconnectScheduled.set(false);
             if (approvalRejected || !Main.getInstance().isEnabled()) return;
+            if (Main.getInstance().cobbleSocketClient != this) return;
             try {
                 CobbleSocketClient newClient = new CobbleSocketClient();
                 Main.getInstance().cobbleSocketClient = newClient;

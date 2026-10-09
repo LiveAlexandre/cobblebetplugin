@@ -44,6 +44,7 @@ public final class PluginUpdateManager {
     private volatile String officialVersion = "";
     private volatile String officialJarName = "CobbleBet.jar";
     private volatile String officialSha256 = "";
+    private volatile String officialDownloadUrl = "";
     private volatile boolean releaseAllowsAutoUpdate;
     private volatile String stagedVersion = "";
     private volatile String downloadFailure = "";
@@ -65,11 +66,12 @@ public final class PluginUpdateManager {
         }, 20L * 180L, 20L * 60L * 30L);
     }
 
-    public void setOfficialRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed) {
+    public void setOfficialRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed, String downloadUrl) {
         if (version != null && !version.isBlank()) officialVersion = version.trim();
         if (jarName != null && !jarName.isBlank()) officialJarName = jarName.trim();
         officialSha256 = sha256 != null && sha256.matches("[a-fA-F0-9]{64}")
                 ? sha256.toLowerCase(Locale.ROOT) : "";
+        officialDownloadUrl = validDownloadUrl(downloadUrl);
         releaseAllowsAutoUpdate = autoUpdateAllowed;
         if (!autoUpdateAllowed && officialVersion.equals(stagedVersion)) {
             Bukkit.getScheduler().runTask(plugin, this::cancelStagedUpdate);
@@ -272,8 +274,11 @@ public final class PluginUpdateManager {
                 String jarName = json.has("fileName") ? json.get("fileName").getAsString() : "CobbleBet.jar";
                 String sha256 = json.has("sha256") ? json.get("sha256").getAsString() : "";
                 boolean approved = json.has("autoUpdateApproved") && json.get("autoUpdateApproved").getAsBoolean();
+                String suppliedDownload = json.has("downloadUrl") ? json.get("downloadUrl").getAsString() : "";
+                String resolvedDownload = suppliedDownload.isBlank() ? ""
+                        : URI.create(releaseInfoUrl()).resolve(suppliedDownload).toString();
                 Bukkit.getScheduler().runTask(plugin,
-                        () -> setOfficialRelease(version, jarName, sha256, approved));
+                        () -> setOfficialRelease(version, jarName, sha256, approved, resolvedDownload));
             } catch (Exception error) {
                 plugin.getLogger().warning("Could not refresh CobbleBet release information: "
                         + (error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage()));
@@ -357,7 +362,18 @@ public final class PluginUpdateManager {
     }
 
     private String downloadUrl() {
+        if (!officialDownloadUrl.isBlank()) return officialDownloadUrl;
         return Main.testMode ? "http://localhost:8908/api/download-plugin" : PRODUCTION_DOWNLOAD_URL;
+    }
+
+    private String validDownloadUrl(String value) {
+        if (value == null || value.isBlank()) return "";
+        try {
+            URI uri = URI.create(value.trim());
+            if ((uri.getScheme().equalsIgnoreCase("https") || uri.getScheme().equalsIgnoreCase("http"))
+                    && uri.getHost() != null) return uri.toString();
+        } catch (RuntimeException ignored) {}
+        return "";
     }
 
     private String releaseInfoUrl() {

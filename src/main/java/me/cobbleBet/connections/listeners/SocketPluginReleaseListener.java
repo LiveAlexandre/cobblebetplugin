@@ -15,7 +15,8 @@ public final class SocketPluginReleaseListener extends SocketMessageListener {
         String version = json.has("latestPluginVersion") ? json.get("latestPluginVersion").getAsString() : "";
         String jarName = json.has("pluginJarName") ? json.get("pluginJarName").getAsString() : "";
         String sha256 = json.has("pluginSha256") ? json.get("pluginSha256").getAsString() : "";
+        String downloadUrl = json.has("pluginDownloadUrl") ? json.get("pluginDownloadUrl").getAsString() : "";
         boolean autoUpdateAllowed = json.has("pluginAutoUpdateAllowed") && json.get("pluginAutoUpdateAllowed").getAsBoolean();
-        Main.getInstance().setOfficialPluginRelease(version, jarName, sha256, autoUpdateAllowed);
+        Main.getInstance().setOfficialPluginRelease(version, jarName, sha256, autoUpdateAllowed, downloadUrl);
     }
 }

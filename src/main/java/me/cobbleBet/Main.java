@@ -178,8 +178,8 @@ public final class Main extends JavaPlugin {
         connectSocket();
     }
 
-    public void setOfficialPluginRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed) {
-        updateManager.setOfficialRelease(version, jarName, sha256, autoUpdateAllowed);
+    public void setOfficialPluginRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed, String downloadUrl) {
+        updateManager.setOfficialRelease(version, jarName, sha256, autoUpdateAllowed, downloadUrl);
     }
 
     public String getOfficialPluginVersion() {

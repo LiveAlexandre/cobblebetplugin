@@ -79,7 +79,7 @@ public final class RouletteTableManager implements Listener {
                 if (view.animationGeneration != generation || ball.isDead()) { cancel(); return; }
                 double progress = step / 44.0;
                 double eased = 1 - Math.pow(1 - Math.min(1, progress), 2.4);
-                double finalAngle = (result / 37.0) * Math.PI * 2;
+                double finalAngle = (winningPocket(result, color) / 19.0) * Math.PI * 2;
                 double angle = Math.PI * 10 * eased + finalAngle * eased;
                 ball.teleport(wheelPoint(view.table, angle, 1.02));
                 if (step % 3 == 0) view.table.location.getWorld().playSound(view.table.location, Sound.BLOCK_NOTE_BLOCK_HAT, .25f, .8f + (float) progress);
@@ -115,18 +115,16 @@ public final class RouletteTableManager implements Listener {
         for (double right : new double[]{-1.78, 1.78}) for (double forward : new double[]{-1.22, 1.22})
             structure.add(block(table, point(table.location, right, .31, forward), face, table.style.leg, .24f, .72f, .24f));
 
-        // Recessed wheel on the left. Short square pockets keep the ring clean
-        // from every angle instead of overlapping into long spokes.
-        structure.add(block(table, point(table.location, -1.05, .89, -.25), face,
-                Material.POLISHED_BLACKSTONE, 1.82f, .045f, 1.82f));
-        for (int segment = 0; segment < 18; segment++) {
-            double angle = segment * Math.PI * 2 / 18;
+        // One plain circle of separate pockets. Each square is evenly spaced
+        // and rotated toward the wheel center.
+        for (int pocket = 0; pocket < 19; pocket++) {
+            double angle = pocket * Math.PI * 2 / 19;
             double right = -1.05 + Math.sin(angle) * .70;
             double forward = -.25 + Math.cos(angle) * .70;
-            Material material = segment == 0 ? Material.LIME_CONCRETE
-                    : segment % 2 == 0 ? Material.RED_CONCRETE : Material.BLACK_CONCRETE;
+            Material material = pocket == 0 ? Material.LIME_CONCRETE
+                    : pocket % 2 == 1 ? Material.RED_CONCRETE : Material.BLACK_CONCRETE;
             structure.add(block(table, point(table.location, right, .925, forward),
-                    face + (float) Math.toDegrees(angle), material, .25f, .045f, .25f));
+                    face + (float) Math.toDegrees(angle), material, .18f, .055f, .18f));
         }
         structure.add(block(table, point(table.location, -1.05, .95, -.25), face,
                 table.style.trim, .34f, .11f, .34f));
@@ -189,6 +187,7 @@ public final class RouletteTableManager implements Listener {
     private TextDisplay flatText(Table table, Location at, float yaw, float scale) { return at.getWorld().spawn(at, TextDisplay.class, entity -> { display(entity, table); entity.setBillboard(Display.Billboard.FIXED); entity.setRotation(yaw, -90); entity.setAlignment(TextDisplay.TextAlignment.CENTER); entity.setLineWidth(520); entity.setShadowed(true); entity.setSeeThrough(true); entity.setDefaultBackground(false); entity.setBackgroundColor(Color.fromARGB(0,0,0,0)); entity.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale), new Quaternionf())); }); }
     private TextDisplay flatLabel(Table table, Location at, float yaw, float scale, String label, NamedTextColor color) { TextDisplay display = flatText(table, at, yaw, scale); display.text(Component.text(label, color).decorate(TextDecoration.BOLD)); return display; }
     private NamedTextColor rouletteColor(String color) { return "red".equalsIgnoreCase(color) ? NamedTextColor.RED : "green".equalsIgnoreCase(color) ? NamedTextColor.GREEN : NamedTextColor.WHITE; }
+    private int winningPocket(int result, String color) { if (result == 0 || "green".equalsIgnoreCase(color)) return 0; int pair = Math.floorMod(result * 5, 9); return "red".equalsIgnoreCase(color) ? 1 + pair * 2 : 2 + pair * 2; }
     private void display(Display display, Table table) { display.setPersistent(false); display.setViewRange(1.5f); display.setGlowing(table.glowing); if (table.glowing) display.setGlowColorOverride(table.style.glow); }
 
     private View available(Player player, String id) { View view = find(id); if (view == null) { player.sendMessage("§cNo Roulette table exists with ID §f" + id + "§c."); return null; } if (activePlayers.containsKey(view.table.id)) { player.sendMessage("§cWait for the active Roulette spin to finish first."); return null; } return view; }
