@@ -2,6 +2,7 @@ package me.cobbleBet.commands;
 
 import me.cobbleBet.Main;
 import me.cobbleBet.api.API;
+import me.cobbleBet.connections.listeners.SocketTokenResponseListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -26,9 +27,12 @@ public class GambleCommand implements CommandExecutor {
         }
 
         try {
+            SocketTokenResponseListener.expect(player);
             API.generateAndRegisterPlayerToken(player);
             player.sendMessage(Component.text("Generating login token...", NamedTextColor.BLUE));
-        } catch (Exception ignored) {
+        } catch (Exception error) {
+            SocketTokenResponseListener.cancel(player.getUniqueId());
+            main.getLogger().warning("Could not request a CobbleBet login link for " + player.getName() + ": " + error.getMessage());
             if (main.gamblingIndicatorManager != null) {
                 main.gamblingIndicatorManager.stopGambling(player);
             }
