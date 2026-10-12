@@ -41,15 +41,25 @@ public class SocketTokenResponseListener extends SocketMessageListener {
             Main.getInstance().getLogger().log(Level.WARNING, "CobbleBet returned an invalid login-link response.", error);
             return;
         }
+        final String link = getLink(json, token);
         Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
-            PENDING.remove(uuid);
-            Player player = Bukkit.getPlayer(uuid);
-            if (player == null || !player.isOnline()) {
-                Main.getInstance().getLogger().warning("CobbleBet generated a login link, but the requesting player is no longer online: " + uuid);
-                return;
+            try {
+                PENDING.remove(uuid);
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !player.isOnline()) {
+                    Main.getInstance().getLogger().warning("CobbleBet generated a login link, but the requesting player is no longer online: " + uuid);
+                    acknowledgeResponse(json);
+                    return;
+                }
+                Component message = Component.text(link, NamedTextColor.YELLOW)
+                        .hoverEvent(HoverEvent.showText(Component.text("Private one-use link. Do not share it.", NamedTextColor.RED)))
+                        .clickEvent(ClickEvent.openUrl(link));
+                player.sendMessage(Component.text("Click this private link to open CobbleBet: ", NamedTextColor.GRAY).append(message));
+                acknowledgeResponse(json);
+                Main.getInstance().getLogger().info("Delivered the CobbleBet login link to " + player.getName() + ".");
+            } catch (RuntimeException error) {
+                Main.getInstance().getLogger().log(Level.SEVERE, "Received a CobbleBet login link but could not deliver it to " + uuid + ".", error);
             }
-            Component message = getLink(json, token);
-            player.sendMessage(Component.text("Click this private link to open CobbleBet: ", NamedTextColor.GRAY).append(message));
         });
     }
 
@@ -67,17 +77,13 @@ public class SocketTokenResponseListener extends SocketMessageListener {
         PENDING.remove(uuid);
     }
 
-    private static @NotNull Component getLink(JsonObject json, String token) {
+    private static @NotNull String getLink(JsonObject json, String token) {
         String link = responseUrl(json);
         if (link == null) {
             link = (Main.testMode ? "http://localhost:8908/auth/magic-login?token="
                     : "https://cobblebet.com/auth/magic-login?token=") + token;
         }
-
-        Component message = Component.text(link, NamedTextColor.YELLOW)
-                .hoverEvent(HoverEvent.showText(Component.text("Private one-use link. Do not share it.", NamedTextColor.RED)))
-                .clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, link));
-        return message;
+        return link;
     }
 
     private static String responseUrl(JsonObject json) {

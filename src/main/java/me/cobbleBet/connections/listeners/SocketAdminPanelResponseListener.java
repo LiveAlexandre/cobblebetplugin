@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import java.net.URI;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class SocketAdminPanelResponseListener extends SocketMessageListener {
 
@@ -47,15 +48,21 @@ public class SocketAdminPanelResponseListener extends SocketMessageListener {
 
         String panelUrl = url;
         Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
-            Player player = Bukkit.getPlayer(playerId);
-            if (player == null || !player.isOnline()) {
-                return;
-            }
+            try {
+                Player player = Bukkit.getPlayer(playerId);
+                if (player == null || !player.isOnline()) {
+                    acknowledgeResponse(json);
+                    return;
+                }
 
-            Component link = Component.text(panelUrl, NamedTextColor.YELLOW)
-                    .clickEvent(ClickEvent.openUrl(panelUrl));
-            player.sendMessage(Component.text("Your CobbleBet admin panel link (one use, expires in 5 minutes): ", NamedTextColor.GREEN)
-                    .append(link));
+                Component link = Component.text(panelUrl, NamedTextColor.YELLOW)
+                        .clickEvent(ClickEvent.openUrl(panelUrl));
+                player.sendMessage(Component.text("Your CobbleBet admin panel link (one use, expires in 5 minutes): ", NamedTextColor.GREEN)
+                        .append(link));
+                acknowledgeResponse(json);
+            } catch (RuntimeException error) {
+                Main.getInstance().getLogger().log(Level.SEVERE, "Received a CobbleBet admin link but could not deliver it to " + playerId + ".", error);
+            }
         });
     }
 }

@@ -58,7 +58,6 @@ public class SocketMessageHandler {
             String type = json.get("type").getAsString();
             if (type.equalsIgnoreCase("tokenResponse") || type.equalsIgnoreCase("adminPanelResponse")) {
                 Main.getInstance().getLogger().info("Received CobbleBet " + type + ".");
-                acknowledge(json, type);
             }
 
             for(SocketMessageListener listener : listeners) {
@@ -72,24 +71,6 @@ public class SocketMessageHandler {
             Main.getInstance().getLogger().log(Level.SEVERE, "Could not process a CobbleBet socket response.", error);
         }
     }
-
-    private void acknowledge(JsonObject response, String responseType) {
-        if (!response.has("requestId") || !client.isOpen()) return;
-        JsonObject acknowledgment = new JsonObject();
-        acknowledgment.addProperty("type", "linkResponseAck");
-        acknowledgment.addProperty("requestId", response.get("requestId").getAsString());
-        acknowledgment.addProperty("responseType", responseType);
-        try {
-            client.send(acknowledgment.toString());
-        } catch (RuntimeException error) {
-            Main.getInstance().getLogger().warning("Received " + responseType
-                    + " but could not acknowledge it: " + error.getMessage());
-        }
-    }
-
-
-
-
 
     public ArrayList<SocketMessageListener> getListeners() {
         return listeners;
