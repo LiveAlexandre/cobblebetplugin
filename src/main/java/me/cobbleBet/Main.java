@@ -60,6 +60,7 @@ public final class Main extends JavaPlugin {
     public static String cobblebetToken;
     public static boolean premiumEnabled;
     public static String serverDisplayName;
+    public static String publicJoinAddress;
     public static String serverId;
 
     // =========================

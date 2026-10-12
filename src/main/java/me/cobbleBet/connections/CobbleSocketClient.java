@@ -34,6 +34,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("serverPort", Bukkit.getPort());
         hello.addProperty("serverId", Main.serverId);
         hello.addProperty("serverName", Main.serverDisplayName == null || Main.serverDisplayName.isBlank() ? Bukkit.getMotd() : Main.serverDisplayName);
+        hello.addProperty("publicJoinAddress", Main.publicJoinAddress == null ? "" : Main.publicJoinAddress);
         hello.addProperty("pluginName", "CobbleBet");
         hello.addProperty("platform", "Minecraft");
         hello.addProperty("pluginVersion", Main.getInstance().getDescription().getVersion());

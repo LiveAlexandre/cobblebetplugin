@@ -67,6 +67,12 @@ cobblebetToken: ""
 # Optional name shown in the CobbleBet admin dashboard. Blank uses the server MOTD.
 serverName: ""
 
+# Player-facing address shown in the CobbleBet admin dashboard.
+# Set this when players use a domain, proxy, or a port different from the server's outbound connection.
+# Examples: "play.example.com" or "play.example.com:25565"
+# Blank falls back to the connection's observed public IP and the reported Minecraft port.
+publicAddress: ""
+
 # Enables premium features if token is valid
 premiumEnabled: true
 
