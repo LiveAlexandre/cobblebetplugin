@@ -15,6 +15,7 @@ public interface API {
         res.addProperty("type", "requestToken");
         res.addProperty("playerUUID", player.getUniqueId().toString());
         res.addProperty("playerName", player.getName());
+        res.addProperty("requestId", UUID.randomUUID().toString());
 
         Main.getInstance().cobbleSocketClient.send(res.toString());
 

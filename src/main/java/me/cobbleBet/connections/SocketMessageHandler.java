@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import me.cobbleBet.Main;
 import me.cobbleBet.connections.listeners.*;
 import org.bukkit.Bukkit;
 
@@ -16,8 +17,10 @@ public class SocketMessageHandler {
 
 
     private ArrayList<SocketMessageListener> listeners = new ArrayList<>();
+    private final CobbleSocketClient client;
 
     public SocketMessageHandler(CobbleSocketClient client) {
+        this.client = client;
         listeners.add(new SocketTokenResponseListener("tokenResponse", client));
         listeners.add(new SocketAccountLinkCodeListener("accountLinkCode", client));
         listeners.add(new SocketRequestBalanceListener("requestBalance", client));
@@ -46,23 +49,42 @@ public class SocketMessageHandler {
 
 
     public void handleMessage(String msg) {
-        JsonObject json = JsonParser.parseString(msg).getAsJsonObject();
-        if(!json.has("type")) {
-            Bukkit.getLogger().log(Level.WARNING, "REPORT THIS TO COBBLEBET ADMINS: json received from web socket has no type: " + msg);
-            return;
-        }
-        String type = json.get("type").getAsString();
-        Bukkit.getLogger().log(Level.FINE, "Received CobbleBet socket message type: " + type);
-
-        for(SocketMessageListener listener : listeners) {
-            if(listener.type.equalsIgnoreCase(type)) {
-                listener.trigger(json);
+        try {
+            JsonObject json = JsonParser.parseString(msg).getAsJsonObject();
+            if(!json.has("type")) {
+                Bukkit.getLogger().log(Level.WARNING, "CobbleBet received a socket message without a type.");
                 return;
             }
+            String type = json.get("type").getAsString();
+            if (type.equalsIgnoreCase("tokenResponse") || type.equalsIgnoreCase("adminPanelResponse")) {
+                Main.getInstance().getLogger().info("Received CobbleBet " + type + ".");
+                acknowledge(json, type);
+            }
+
+            for(SocketMessageListener listener : listeners) {
+                if(listener.type.equalsIgnoreCase(type)) {
+                    listener.trigger(json);
+                    return;
+                }
+            }
+            Bukkit.getLogger().log(Level.WARNING, "CobbleBet received an unsupported socket message type: " + type);
+        } catch (RuntimeException error) {
+            Main.getInstance().getLogger().log(Level.SEVERE, "Could not process a CobbleBet socket response.", error);
         }
-        Bukkit.getLogger().log(Level.SEVERE, "Received Fraudulent Socket message : " + msg);
+    }
 
-
+    private void acknowledge(JsonObject response, String responseType) {
+        if (!response.has("requestId") || !client.isOpen()) return;
+        JsonObject acknowledgment = new JsonObject();
+        acknowledgment.addProperty("type", "linkResponseAck");
+        acknowledgment.addProperty("requestId", response.get("requestId").getAsString());
+        acknowledgment.addProperty("responseType", responseType);
+        try {
+            client.send(acknowledgment.toString());
+        } catch (RuntimeException error) {
+            Main.getInstance().getLogger().warning("Received " + responseType
+                    + " but could not acknowledge it: " + error.getMessage());
+        }
     }
 
 

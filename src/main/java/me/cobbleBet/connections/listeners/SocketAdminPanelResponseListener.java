@@ -31,15 +31,10 @@ public class SocketAdminPanelResponseListener extends SocketMessageListener {
             playerId = UUID.fromString(json.get("playerUUID").getAsString());
             url = json.get("url").getAsString();
             URI parsedUrl = URI.create(url);
-            if (!"https".equalsIgnoreCase(parsedUrl.getScheme()) || parsedUrl.getHost() == null) {
+            boolean allowedScheme = "https".equalsIgnoreCase(parsedUrl.getScheme())
+                    || (Main.testMode && "http".equalsIgnoreCase(parsedUrl.getScheme()));
+            if (!allowedScheme || parsedUrl.getHost() == null) {
                 return;
-            }
-            if (Main.testMode) {
-                String localPath = parsedUrl.getRawPath();
-                if (parsedUrl.getRawQuery() != null) {
-                    localPath += "?" + parsedUrl.getRawQuery();
-                }
-                url = URI.create("http://localhost:8908").resolve(localPath).toString();
             }
         } catch (IllegalArgumentException e) {
             return;

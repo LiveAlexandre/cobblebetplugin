@@ -121,6 +121,7 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             request.addProperty("type", "requestAdminPanel");
             request.addProperty("playerUUID", player.getUniqueId().toString());
             request.addProperty("playerName", player.getName());
+            request.addProperty("requestId", java.util.UUID.randomUUID().toString());
             Main.getInstance().pendingAdminPanelRequests.put(player.getUniqueId(), System.currentTimeMillis() + 30_000);
             try {
                 Main.getInstance().cobbleSocketClient.send(request.toString());

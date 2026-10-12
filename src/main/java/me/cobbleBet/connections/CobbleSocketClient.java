@@ -48,11 +48,13 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("supportsWebsiteSettings", true);
         hello.addProperty("supportsBalanceTransactions", true);
         hello.addProperty("supportsReleaseAutoUpdateGate", true);
+        hello.addProperty("supportsLinkResponseAck", true);
         hello.addProperty("websiteSettingsInitialized", me.cobbleBet.storage.WebsiteSettingsStore.isInitialized());
         hello.add("websiteSettings", me.cobbleBet.storage.WebsiteSettingsStore.getSettings());
         String icon = Main.getInstance().readServerIconDataUrl();
         if (!icon.isBlank()) hello.addProperty("serverIcon", icon);
         this.send(hello.toString());
+        Main.getInstance().getLogger().info("CobbleBet socket opened; waiting for server approval.");
     }
 
     @Override
@@ -65,6 +67,8 @@ public class CobbleSocketClient extends WebSocketClient {
         approved = false;
         if (stopping) return;
         if (Main.getInstance().cobbleSocketClient != this) return;
+        Main.getInstance().getLogger().warning("CobbleBet socket closed (code " + code + ", "
+                + (remote ? "remote" : "local") + "): " + (reason == null || reason.isBlank() ? "no reason" : reason));
         if (approvalRejected) {
             Main.getInstance().getLogger().warning("CobbleBet rejected this plugin connection. Check cobblebetToken in config.yml; reconnecting is paused until the server restarts.");
             return;
@@ -74,7 +78,8 @@ public class CobbleSocketClient extends WebSocketClient {
 
     @Override
     public void onError(Exception ex) {
-        Main.getInstance().getLogger().fine("CobbleBet connection issue: " + ex.getMessage());
+        Main.getInstance().getLogger().warning("CobbleBet connection issue: "
+                + (ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage()));
     }
 
     public boolean isApproved() {

@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -47,7 +48,7 @@ public class SocketTokenResponseListener extends SocketMessageListener {
                 Main.getInstance().getLogger().warning("CobbleBet generated a login link, but the requesting player is no longer online: " + uuid);
                 return;
             }
-            Component message = getLinkFromToken(token);
+            Component message = getLink(json, token);
             player.sendMessage(Component.text("Click this private link to open CobbleBet: ", NamedTextColor.GRAY).append(message));
         });
     }
@@ -66,13 +67,28 @@ public class SocketTokenResponseListener extends SocketMessageListener {
         PENDING.remove(uuid);
     }
 
-    private static @NotNull Component getLinkFromToken(String token) {
-        StringBuilder link = new StringBuilder(Main.testMode? "http://localhost:8908/auth/magic-login?token=" : "https://cobblebet.com/auth/magic-login?token=");
-        link.append(token);
+    private static @NotNull Component getLink(JsonObject json, String token) {
+        String link = responseUrl(json);
+        if (link == null) {
+            link = (Main.testMode ? "http://localhost:8908/auth/magic-login?token="
+                    : "https://cobblebet.com/auth/magic-login?token=") + token;
+        }
 
-        Component message = Component.text(link.toString(), NamedTextColor.YELLOW)
+        Component message = Component.text(link, NamedTextColor.YELLOW)
                 .hoverEvent(HoverEvent.showText(Component.text("Private one-use link. Do not share it.", NamedTextColor.RED)))
-                .clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, link.toString()));
+                .clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, link));
         return message;
+    }
+
+    private static String responseUrl(JsonObject json) {
+        if (!json.has("url")) return null;
+        try {
+            URI uri = URI.create(json.get("url").getAsString());
+            boolean allowedScheme = "https".equalsIgnoreCase(uri.getScheme())
+                    || (Main.testMode && "http".equalsIgnoreCase(uri.getScheme()));
+            return allowedScheme && uri.getHost() != null ? uri.toString() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 }
