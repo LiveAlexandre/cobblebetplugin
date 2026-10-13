@@ -179,6 +179,14 @@ public final class Main extends JavaPlugin {
         connectSocket();
     }
 
+    public void reloadPhysicalModels() {
+        if (coinflipBoardManager != null) coinflipBoardManager.load();
+        if (blackjackTableManager != null) blackjackTableManager.load();
+        if (minesFieldManager != null) minesFieldManager.load();
+        if (plinkoBoardManager != null) plinkoBoardManager.load();
+        if (rouletteTableManager != null) rouletteTableManager.load();
+    }
+
     public void setOfficialPluginRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed, String downloadUrl) {
         updateManager.setOfficialRelease(version, jarName, sha256, autoUpdateAllowed, downloadUrl);
     }

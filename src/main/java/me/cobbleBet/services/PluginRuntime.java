@@ -13,6 +13,7 @@ import me.cobbleBet.gui.PlinkoController;
 import me.cobbleBet.gui.RouletteController;
 import me.cobbleBet.listeners.GamblingPageActivityListener;
 import me.cobbleBet.listeners.GambleServerLinkListener;
+import me.cobbleBet.listeners.PhysicalModelProtectionListener;
 import me.cobbleBet.visuals.BlackjackTableManager;
 import me.cobbleBet.visuals.CoinflipBoardManager;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
@@ -54,12 +55,9 @@ public final class PluginRuntime {
         register(plugin, plugin.rouletteTableManager);
         register(plugin, new GamblingPageActivityListener(plugin.gamblingIndicatorManager));
         register(plugin, new GambleServerLinkListener());
+        register(plugin, new PhysicalModelProtectionListener(plugin));
 
-        plugin.coinflipBoardManager.load();
-        plugin.blackjackTableManager.load();
-        plugin.minesFieldManager.load();
-        plugin.plinkoBoardManager.load();
-        plugin.rouletteTableManager.load();
+        plugin.reloadPhysicalModels();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.coinflipController.requestLobby(), 20L * 15L, 20L * 15L);
         new WanderingTraderTimer(plugin).runTaskTimer(plugin, 600L, 600L);
         return economyManager;

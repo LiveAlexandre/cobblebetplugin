@@ -169,10 +169,11 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
                 Main.getInstance().reloadConfig();
                 Main.loadConfigValues();
                 me.cobbleBet.storage.WebsiteSettingsStore.load(Main.getInstance());
+                Main.getInstance().reloadPhysicalModels();
                 Main.getInstance().reconnectSocket();
 
                 long time = System.currentTimeMillis() - start;
-                sender.sendMessage("§aCobbleBet config reloaded successfully in §f" + time + "ms§a.");
+                sender.sendMessage("§aCobbleBet config and 3D models reloaded successfully in §f" + time + "ms§a.");
 
             } catch (Exception e) {
                 sender.sendMessage("§cFailed to reload CobbleBet.");
