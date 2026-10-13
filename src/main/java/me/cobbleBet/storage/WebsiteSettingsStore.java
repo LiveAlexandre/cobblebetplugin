@@ -39,6 +39,8 @@ public final class WebsiteSettingsStore {
             if (game.equals("coinflip")) {
                 double maximum = config.getDouble(ROOT + ".gameRules.coinflip.maxAmount", 1_000_000_000_000D);
                 rule.addProperty("maxAmount", Double.isFinite(maximum) ? Math.max(.1, Math.min(1_000_000_000_000D, Math.round(maximum * 10) / 10D)) : 1_000_000_000_000D);
+                String spinStyle = config.getString(ROOT + ".gameRules.coinflip.spinStyle", "circle");
+                rule.addProperty("spinStyle", Set.of("circle", "reel").contains(spinStyle) ? spinStyle : "circle");
             }
             rules.add(game, rule);
         }
@@ -71,7 +73,10 @@ public final class WebsiteSettingsStore {
         for (String game : GAMES) {
             config.set(ROOT + ".enabledGames." + game, settings.getAsJsonObject("enabledGames").get(game).getAsBoolean());
             config.set(ROOT + ".gameRules." + game + ".percent", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("percent").getAsDouble());
-            if (game.equals("coinflip")) config.set(ROOT + ".gameRules.coinflip.maxAmount", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("maxAmount").getAsDouble());
+            if (game.equals("coinflip")) {
+                config.set(ROOT + ".gameRules.coinflip.maxAmount", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("maxAmount").getAsDouble());
+                config.set(ROOT + ".gameRules.coinflip.spinStyle", settings.getAsJsonObject("gameRules").getAsJsonObject(game).get("spinStyle").getAsString());
+            }
         }
         config.set(ROOT + ".background.image", settings.getAsJsonObject("background").get("image").getAsString());
         config.set(ROOT + ".background.blur", settings.getAsJsonObject("background").get("blur").getAsInt());
@@ -127,6 +132,7 @@ public final class WebsiteSettingsStore {
         }
         double maximum = settings.getAsJsonObject("gameRules").getAsJsonObject("coinflip").get("maxAmount").getAsDouble();
         if (!Double.isFinite(maximum) || maximum < .1 || maximum > 1_000_000_000_000D) throw new IllegalArgumentException("Invalid Coinflip maximum.");
+        if (!Set.of("circle", "reel").contains(settings.getAsJsonObject("gameRules").getAsJsonObject("coinflip").get("spinStyle").getAsString())) throw new IllegalArgumentException("Invalid Coinflip spin style.");
         JsonObject background = settings.getAsJsonObject("background");
         double blur = background.get("blur").getAsDouble();
         if (!validImage(background.get("image").getAsString()) || !Double.isFinite(blur) || blur < 0 || blur > 30) throw new IllegalArgumentException("Invalid background.");

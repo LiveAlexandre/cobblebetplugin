@@ -167,6 +167,7 @@ websiteCustomization:
     coinflip:
       percent: 0.0
       maxAmount: 1000000000000.0
+      spinStyle: circle
     plinko:
       percent: 0.0
     dice:

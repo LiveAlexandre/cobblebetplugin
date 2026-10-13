@@ -32,6 +32,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class CoinflipController implements Listener {
     private static final int[] LISTING_SLOTS = {10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34};
+    private static final int[] CIRCLE_SLOTS = {11,12,13,14,15,24,33,42,41,40,39,38,29,20};
+    private static final int[] REEL_SLOTS = {19,20,21,22,23,24,25};
     private static final DecimalFormat MONEY = new DecimalFormat("#,##0.##");
     private final Main plugin;
     private final List<Listing> listings = new CopyOnWriteArrayList<>();
@@ -188,7 +190,7 @@ public final class CoinflipController implements Listener {
         } else if (holder.kind == Kind.CONFIRM) {
             if (slot == 11) send(player, holder.cancel ? "cancel" : "join", holder.id, -1);
             else if (slot == 15) openLobby(player, 0);
-        } else if (holder.kind == Kind.REVEAL && slot == 40) {
+        } else if (holder.kind == Kind.REVEAL && slot == 49) {
             openLobby(player, 0);
         }
     }
@@ -211,40 +213,62 @@ public final class CoinflipController implements Listener {
     }
 
     public void reveal(Player player, boolean won, double amount, String opponent) {
+        boolean circle = !"reel".equalsIgnoreCase(plugin.getConfig().getString("websiteCustomization.gameRules.coinflip.spinStyle", "circle"));
+        int[] track = circle ? CIRCLE_SLOTS : REEL_SLOTS;
+        int winnerIndex = circle ? 2 : 3;
         MenuHolder holder = new MenuHolder(Kind.REVEAL, 0, null, false);
-        Inventory inv = Bukkit.createInventory(holder, 45, Component.text("Coinflip • Center decides", NamedTextColor.GOLD)); holder.inventory=inv;
+        Inventory inv = Bukkit.createInventory(holder, 54, Component.text(circle ? "Coinflip • Circular spin" : "Coinflip • Center reel", NamedTextColor.GOLD)); holder.inventory=inv;
         fill(inv, Material.BLACK_STAINED_GLASS_PANE);
         OfflinePlayer self = player; OfflinePlayer other = Bukkit.getOfflinePlayer(opponent);
-        inv.setItem(4, item(Material.CLOCK, "Fair Coinflip • 50 / 50", NamedTextColor.AQUA,
-                "The head that stops in the center wins.", "Follow the gold arrows."));
-        inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER POSITION  ▼", NamedTextColor.GOLD,
-                "The center head decides the result."));
-        inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER POSITION  ▲", NamedTextColor.GOLD,
-                "The center head decides the result."));
+        if (circle) {
+            inv.setItem(4, item(Material.GOLD_INGOT, "▼  WINNER POINTER  ▼", NamedTextColor.GOLD,
+                    "The head below this pointer wins."));
+            inv.setItem(21, head(self, player.getName(), NamedTextColor.AQUA));
+            inv.setItem(22, item(Material.CLOCK, "50 / 50", NamedTextColor.GOLD,
+                    "Player heads spin clockwise around the ring."));
+            inv.setItem(23, head(other, opponent, NamedTextColor.LIGHT_PURPLE));
+            inv.setItem(31, item(Material.SUNFLOWER, "Circular spin", NamedTextColor.YELLOW,
+                    "Watch the fixed pointer at the top."));
+        } else {
+            inv.setItem(4, item(Material.CLOCK, "Fair Coinflip • 50 / 50", NamedTextColor.AQUA,
+                    "The head that stops in the center wins.", "Follow the gold arrows."));
+            inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER POSITION  ▼", NamedTextColor.GOLD,
+                    "The center head decides the result."));
+            inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER POSITION  ▲", NamedTextColor.GOLD,
+                    "The center head decides the result."));
+        }
         player.openInventory(inv);
         new BukkitRunnable() {
             int tick, step; long next;
             @Override public void run() {
                 if (!player.isOnline() || player.getOpenInventory().getTopInventory().getHolder() != holder) { cancel(); return; }
                 tick++; if (tick < next) return;
-                step++; boolean showSelf = step % 2 == 0;
-                for (int slot=19;slot<=25;slot++) inv.setItem(slot, head((slot + step) % 2 == 0 ? self : other,
-                        (slot + step) % 2 == 0 ? player.getName() : opponent, NamedTextColor.WHITE));
+                step++;
+                for (int i=0;i<track.length;i++) inv.setItem(track[i], head((i + step) % 2 == 0 ? self : other,
+                        (i + step) % 2 == 0 ? player.getName() : opponent, NamedTextColor.WHITE));
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, .35f, 1.1f + Math.min(.7f, step*.025f));
                 next = tick + (step < 12 ? 2 : step < 20 ? 4 : 7);
                 if (step >= 25) {
                     OfflinePlayer winner = won ? self : other, loser = won ? other : self;
                     String winnerName = won ? player.getName() : opponent, loserName = won ? opponent : player.getName();
-                    for (int slot=19;slot<=25;slot++) {
-                        boolean winnerSlot = Math.abs(slot - 22) % 2 == 0;
-                        inv.setItem(slot, head(winnerSlot ? winner : loser, winnerSlot ? winnerName : loserName,
-                                slot == 22 ? (won ? NamedTextColor.GREEN : NamedTextColor.RED) : NamedTextColor.GRAY));
+                    for (int i=0;i<track.length;i++) {
+                        boolean winnerSlot = Math.abs(i - winnerIndex) % 2 == 0;
+                        inv.setItem(track[i], head(winnerSlot ? winner : loser, winnerSlot ? winnerName : loserName,
+                                i == winnerIndex ? (won ? NamedTextColor.GREEN : NamedTextColor.RED) : NamedTextColor.GRAY));
                     }
-                    inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD,
-                            "The center head is the winner."));
-                    inv.setItem(31, item(Material.GOLD_BLOCK, "▲  CENTER RESULT  ▲", NamedTextColor.GOLD,
-                            "The reel stopped on " + winnerName + "."));
-                    inv.setItem(40, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
+                    if (circle) {
+                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD,
+                                "The pointer landed on " + winnerName + "."));
+                        inv.setItem(22, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
+                                won ? "Victory" : "Defeat", won ? NamedTextColor.GREEN : NamedTextColor.RED,
+                                "The top pointer decides the result."));
+                    } else {
+                        inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD,
+                                "The center head is the winner."));
+                        inv.setItem(31, item(Material.GOLD_BLOCK, "▲  CENTER RESULT  ▲", NamedTextColor.GOLD,
+                                "The reel stopped on " + winnerName + "."));
+                    }
+                    inv.setItem(49, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
                             won ? "You won • payout " + money(amount) : "You lost • stake " + money(amount), won ? NamedTextColor.GREEN : NamedTextColor.RED,
                             "Odds: 50 / 50", "Opponent: " + opponent, "Click to return to the lobby."));
                     player.playSound(player.getLocation(), won ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, .8f, won ? 1.2f : .7f);
