@@ -33,6 +33,7 @@ public final class ServerStatusService {
         status.addProperty("serverName", Main.serverDisplayName == null || Main.serverDisplayName.isBlank()
                 ? Bukkit.getMotd() : Main.serverDisplayName);
         status.addProperty("publicJoinAddress", Main.publicJoinAddress == null ? "" : Main.publicJoinAddress);
+        status.addProperty("publicJoinAddressSource", Main.publicJoinAddressSource == null ? "unavailable" : Main.publicJoinAddressSource);
         status.addProperty("pluginName", "CobbleBet");
         status.addProperty("pluginVersion", plugin.getDescription().getVersion());
         status.addProperty("protocolVersion", 2);

@@ -61,6 +61,7 @@ public final class Main extends JavaPlugin {
     public static boolean premiumEnabled;
     public static String serverDisplayName;
     public static String publicJoinAddress;
+    public static String publicJoinAddressSource;
     public static String serverId;
 
     // =========================

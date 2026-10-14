@@ -70,7 +70,8 @@ serverName: ""
 # Player-facing address shown in the CobbleBet admin dashboard.
 # Set this when players use a domain, proxy, or a port different from the server's outbound connection.
 # Examples: "play.example.com" or "play.example.com:25565"
-# Blank falls back to the connection's observed public IP and the reported Minecraft port.
+# Blank automatically uses the game host's primary SERVER_IP/SERVER_PORT allocation when available.
+# If your host uses a proxy or custom domain, save the exact player-facing address from the CobbleBet admin page.
 publicAddress: ""
 
 # Enables premium features if token is valid

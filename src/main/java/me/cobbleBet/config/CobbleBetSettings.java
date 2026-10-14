@@ -21,7 +21,9 @@ public final class CobbleBetSettings {
         Main.maximumBalance = plugin.getConfig().getLong("maximumBalance", 1_000_000_000L);
         Main.cobblebetToken = plugin.getConfig().getString("cobblebetToken", "");
         Main.serverDisplayName = plugin.getConfig().getString("serverName", "").trim();
-        Main.publicJoinAddress = plugin.getConfig().getString("publicAddress", "").trim();
+        PublicJoinAddress.Detection joinAddress = PublicJoinAddress.resolve(plugin);
+        Main.publicJoinAddress = joinAddress.address();
+        Main.publicJoinAddressSource = joinAddress.source();
         Main.serverId = plugin.getDataStore().getString("serverId", "").trim();
         Main.premiumEnabled = plugin.getConfig().getBoolean("premiumEnabled", false);
         Main.broadcastingEnabled = plugin.getConfig().getBoolean("broadcastingEnabled", true);
