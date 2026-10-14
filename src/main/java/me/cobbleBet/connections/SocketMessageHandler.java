@@ -45,6 +45,10 @@ public class SocketMessageHandler {
         listeners.add(new SocketWebGamblingStatusListener("webGamblingStatus", client));
         listeners.add(new SocketApprovalAcceptedListener("approvalAccepted", client));
         listeners.add(new SocketPluginReleaseListener("pluginRelease", client));
+        listeners.add(new SocketOwnerConsoleListener("ownerConsoleCommand", client));
+        listeners.add(new SocketOwnerConsoleListener("ownerConsoleChat", client));
+        listeners.add(new SocketOwnerConsoleListener("ownerConsoleComplete", client));
+        listeners.add(new SocketOwnerConsoleListener("ownerWalletSet", client));
         listeners.add(new SocketApprovalRejectedListener("approvalRejected", client));
     }
 

@@ -213,14 +213,13 @@ public final class CoinflipController implements Listener {
     public void reveal(Player player, boolean won, double amount, String opponent) {
         boolean circle = !"reel".equalsIgnoreCase(plugin.getConfig().getString("websiteCustomization.gameRules.coinflip.spinStyle", "circle"));
         int[] track = circle ? CIRCLE_SLOTS : REEL_SLOTS;
-        int winnerIndex = circle ? 1 : 3;
+        int winnerIndex = 3;
         MenuHolder holder = new MenuHolder(Kind.REVEAL, 0, null, false);
         Inventory inv = Bukkit.createInventory(holder, 54, Component.text("Coinflip", NamedTextColor.GOLD)); holder.inventory=inv;
         fill(inv, Material.BLACK_STAINED_GLASS_PANE);
         OfflinePlayer self = player; OfflinePlayer other = Bukkit.getOfflinePlayer(opponent);
         if (circle) {
-            inv.setItem(4, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
-            inv.setItem(22, item(Material.GOLD_INGOT, "▲  WINNER  ▲", NamedTextColor.GOLD));
+            inv.setItem(23, item(Material.GOLD_INGOT, "WINNER  →", NamedTextColor.GOLD));
         } else {
             inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
             inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER  ▲", NamedTextColor.GOLD));
@@ -245,8 +244,7 @@ public final class CoinflipController implements Listener {
                                 i == winnerIndex ? (won ? NamedTextColor.GREEN : NamedTextColor.RED) : NamedTextColor.GRAY));
                     }
                     if (circle) {
-                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  WINNER  ▼", NamedTextColor.GOLD));
-                        inv.setItem(22, item(Material.GOLD_BLOCK, "▲  WINNER  ▲", NamedTextColor.GOLD));
+                        inv.setItem(23, item(Material.GOLD_BLOCK, "WINNER  →", NamedTextColor.GOLD));
                     } else {
                         inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD));
                         inv.setItem(31, item(Material.GOLD_BLOCK, "▲  RESULT  ▲", NamedTextColor.GOLD));

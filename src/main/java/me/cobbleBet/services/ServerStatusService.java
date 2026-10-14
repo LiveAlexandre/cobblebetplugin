@@ -60,6 +60,7 @@ public final class ServerStatusService {
             JsonObject entry = new JsonObject();
             entry.addProperty("uuid", player.getUniqueId().toString());
             entry.addProperty("name", player.getName());
+            entry.addProperty("balance", plugin.getEconomyManager().getBalance(player));
             players.add(entry);
         }
         status.add("onlinePlayers", players);

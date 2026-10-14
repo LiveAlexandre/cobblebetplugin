@@ -14,6 +14,7 @@ import me.cobbleBet.gui.RouletteController;
 import me.cobbleBet.listeners.GamblingPageActivityListener;
 import me.cobbleBet.listeners.GambleServerLinkListener;
 import me.cobbleBet.listeners.PhysicalModelProtectionListener;
+import me.cobbleBet.listeners.OwnerActivityListener;
 import me.cobbleBet.visuals.BlackjackTableManager;
 import me.cobbleBet.visuals.CoinflipBoardManager;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
@@ -56,6 +57,7 @@ public final class PluginRuntime {
         register(plugin, new GamblingPageActivityListener(plugin.gamblingIndicatorManager));
         register(plugin, new GambleServerLinkListener());
         register(plugin, new PhysicalModelProtectionListener(plugin));
+        register(plugin, new OwnerActivityListener(plugin));
 
         plugin.reloadPhysicalModels();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.coinflipController.requestLobby(), 20L * 15L, 20L * 15L);
