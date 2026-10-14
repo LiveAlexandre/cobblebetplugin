@@ -149,8 +149,12 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        double amount = parseAmount(player, args[1]);
-        if (amount <= 0) return;
+        if (args[1].equalsIgnoreCase("all")) {
+            if (!eco().withdrawAll(player)) player.sendMessage(error("Your CobbleBet wallet is empty."));
+            else player.sendMessage(success("Withdrew your full wallet balance."));
+            return;
+        }
+        double amount = parseAmount(player, args[1]); if (amount <= 0) return;
 
         if (!eco().withdraw(player, amount)) {
 
@@ -175,11 +179,15 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        double amount = parseAmount(player, args[1]);
-        if (amount <= 0) return;
+        if (args[1].equalsIgnoreCase("all")) {
+            if (!eco().depositAll(player)) player.sendMessage(error("There are no available funds to deposit, or your wallet is full."));
+            else player.sendMessage(success("Deposited all available funds."));
+            return;
+        }
+        double amount = parseAmount(player, args[1]); if (amount <= 0) return;
         if(eco().getBalance(player) + amount > Main.maximumBalance) {
             player.sendMessage(error(
-                    "The server's max Wallet balance is: " + amount
+                    "The server's max Wallet balance is: " + Main.maximumBalance
             ));
             return;
         }
@@ -235,8 +243,8 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
         String help = "<gradient:#00ffcc:#0066ff><bold>Wallet Help</bold></gradient>\n"
                 + "<gray>/wallet</gray> Open your wallet\n"
-                + "<gray>/wallet deposit <amount></gray>\n"
-                + "<gray>/wallet withdraw <amount></gray>\n"
+                + "<gray>/wallet deposit <amount|all></gray>\n"
+                + "<gray>/wallet withdraw <amount|all></gray>\n"
                 + "<gray>/wallet link</gray> <dark_gray>Link this server to your CobbleBet account</dark_gray>";
         if (!Main.isPermissionRequired("walletAdmin") || player.hasPermission("cobblebet.wallet.admin"))
             help += "\n<gray>/wallet set <player> <amount></gray> <red>(Admin)</red>";
@@ -295,6 +303,8 @@ public class WalletCommand implements CommandExecutor, TabCompleter {
 
             return names;
         }
+
+        if (args.length == 2 && (args[0].equalsIgnoreCase("deposit") || args[0].equalsIgnoreCase("withdraw"))) return List.of("all", "16", "32", "64");
 
         return List.of();
     }

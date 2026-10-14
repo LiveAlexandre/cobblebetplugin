@@ -5,6 +5,7 @@ import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -23,11 +24,14 @@ public final class NativeDialogMenus {
         List<ActionButton> actions = new ArrayList<>();
         for (CobbleMenuController.DialogButton button : menu.buttons()) {
             NamedTextColor color = button.active() ? NamedTextColor.GREEN : NamedTextColor.WHITE;
+            DialogAction action = button.action().contains("$(wallet_percent)")
+                ? DialogAction.commandTemplate("cobblebet menu " + button.action())
+                : DialogAction.staticAction(ClickEvent.runCommand("/cobblebet menu " + button.action()));
             actions.add(ActionButton.create(
                 Component.text(button.label(), color),
                 Component.text(button.tooltip(), NamedTextColor.GRAY),
                 180,
-                DialogAction.staticAction(ClickEvent.runCommand("/cobblebet menu " + button.action()))
+                action
             ));
         }
 
@@ -37,10 +41,14 @@ public final class NativeDialogMenus {
             180,
             null
         );
+        List<DialogInput> inputs = page.equalsIgnoreCase("WALLET_ACTIONS")
+            ? List.of(DialogInput.numberRange("wallet_percent", 300, Component.text("Selected amount", NamedTextColor.AQUA), "%s: %s%%", 5, 100, 50F, 5F))
+            : List.of();
         Dialog dialog = Dialog.create(builder -> builder.empty()
             .base(DialogBase.builder(Component.text(menu.title(), NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
                 .body(List.of(DialogBody.plainMessage(Component.text(menu.body(), NamedTextColor.WHITE))))
+                .inputs(inputs)
                 .build())
             .type(DialogType.multiAction(actions, exit, actions.size() > 1 ? 2 : 1))
         );

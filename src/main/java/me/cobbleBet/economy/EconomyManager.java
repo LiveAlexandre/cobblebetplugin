@@ -193,6 +193,45 @@ public class EconomyManager {
         return true;
     }
 
+    /** Amount the player can move into CobbleBet right now, respecting the wallet cap. */
+    public double getDepositableAmount(Player player) {
+        double room = Math.max(0, Main.maximumBalance - getBalance(player));
+        if (room <= 0) return 0;
+        if (Main.economyType.equalsIgnoreCase("vault")) {
+            return vaultEconomy == null ? 0 : Math.max(0, Math.min(room, vaultEconomy.getBalance(player)));
+        }
+        int total = 0;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == Main.economyItem) total += item.getAmount();
+        }
+        return Math.min(Math.floor(room), total);
+    }
+
+    public double getEnderChestDepositableAmount(Player player) {
+        if (!Main.economyType.equalsIgnoreCase("item")) return 0;
+        double room = Math.max(0, Math.floor(Main.maximumBalance - getBalance(player)));
+        int total = 0;
+        for (ItemStack item : player.getEnderChest().getContents()) {
+            if (item != null && item.getType() == Main.economyItem) total += item.getAmount();
+        }
+        return Math.min(room, total);
+    }
+
+    public boolean depositAll(Player player) {
+        double amount = getDepositableAmount(player);
+        return amount > 0 && deposit(player, amount);
+    }
+
+    public boolean depositAllFromEnderChest(Player player) {
+        double amount = getEnderChestDepositableAmount(player);
+        return amount > 0 && depositFromEnderChest(player, amount);
+    }
+
+    public boolean depositFraction(Player player, double percent) {
+        double amount = fractionAmount(getDepositableAmount(player), percent);
+        return amount > 0 && deposit(player, amount);
+    }
+
     public boolean depositFromEnderChest(Player player, double amount) {
         if (!Main.economyType.equalsIgnoreCase("item") || amount <= 0 || amount != Math.floor(amount) || getBalance(player) + amount > Main.maximumBalance) return false;
         int needed = (int) amount;
@@ -248,6 +287,22 @@ public class EconomyManager {
 
         sendBalanceToServer(player, wallet.getBalance());
         return true;
+    }
+
+    public boolean withdrawAll(Player player) {
+        double amount = getBalance(player);
+        return amount > 0 && withdraw(player, amount);
+    }
+
+    public boolean withdrawFraction(Player player, double percent) {
+        double amount = fractionAmount(getBalance(player), percent);
+        return amount > 0 && withdraw(player, amount);
+    }
+
+    private double fractionAmount(double available, double percent) {
+        if (!Double.isFinite(percent) || percent <= 0) return 0;
+        double amount = available * Math.min(100, percent) / 100.0;
+        return Main.economyType.equalsIgnoreCase("item") ? Math.floor(amount) : Math.floor(amount * 100) / 100.0;
     }
 
     // ==================================
