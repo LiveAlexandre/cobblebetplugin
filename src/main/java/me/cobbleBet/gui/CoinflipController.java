@@ -93,7 +93,7 @@ public final class CoinflipController implements Listener {
         if (listings.isEmpty()) inv.setItem(22, item(Material.CLOCK, "No open Coinflips", NamedTextColor.GRAY,
                 "Create one and wait for a challenger."));
         inv.setItem(36, item(Material.EMERALD, "Create a Coinflip", NamedTextColor.GREEN,
-                "Choose a stake or enter a custom amount.", "Maximum: " + money(maximumAmount)));
+                "Choose your stake."));
         if (page > 0) inv.setItem(39, item(Material.ARROW, "Previous page", NamedTextColor.WHITE));
         inv.setItem(40, item(Material.SUNFLOWER, "Refresh", NamedTextColor.YELLOW, listings.size() + " open on this server"));
         if (page + 1 < pages) inv.setItem(41, item(Material.ARROW, "Next page", NamedTextColor.WHITE));
@@ -139,9 +139,7 @@ public final class CoinflipController implements Listener {
         inv.setItem(13, listingItem(player, listing));
         inv.setItem(11, item(Material.LIME_CONCRETE, cancel ? "Cancel and refund" : "Match for " + money(listing.amount), NamedTextColor.GREEN,
                 cancel ? "Your reserved stake will be returned." : "Win chance: 50%",
-                cancel ? "No fee is charged." : "Winner receives: " + money(listing.payout),
-                cancel ? "Click to confirm cancellation." : "Profit if you win: " + money(Math.max(0, listing.payout - listing.amount)),
-                cancel ? "" : "This starts the center-line winner reveal."));
+                cancel ? "Click to confirm." : "Winner receives: " + money(listing.payout)));
         inv.setItem(15, item(Material.RED_CONCRETE, "Go back", NamedTextColor.RED));
         openViews.put(player.getUniqueId(), new View(Kind.CONFIRM, 0));
         player.openInventory(inv);
@@ -221,21 +219,12 @@ public final class CoinflipController implements Listener {
         fill(inv, Material.BLACK_STAINED_GLASS_PANE);
         OfflinePlayer self = player; OfflinePlayer other = Bukkit.getOfflinePlayer(opponent);
         if (circle) {
-            inv.setItem(4, item(Material.GOLD_INGOT, "▼  WINNER POINTER  ▼", NamedTextColor.GOLD,
-                    "The head below this pointer wins."));
+            inv.setItem(4, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
             inv.setItem(21, head(self, player.getName(), NamedTextColor.AQUA));
-            inv.setItem(22, item(Material.CLOCK, "50 / 50", NamedTextColor.GOLD,
-                    "Player heads spin clockwise around the ring."));
             inv.setItem(23, head(other, opponent, NamedTextColor.LIGHT_PURPLE));
-            inv.setItem(31, item(Material.SUNFLOWER, "Circular spin", NamedTextColor.YELLOW,
-                    "Watch the fixed pointer at the top."));
         } else {
-            inv.setItem(4, item(Material.CLOCK, "Fair Coinflip • 50 / 50", NamedTextColor.AQUA,
-                    "The head that stops in the center wins.", "Follow the gold arrows."));
-            inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER POSITION  ▼", NamedTextColor.GOLD,
-                    "The center head decides the result."));
-            inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER POSITION  ▲", NamedTextColor.GOLD,
-                    "The center head decides the result."));
+            inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
+            inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER  ▲", NamedTextColor.GOLD));
         }
         player.openInventory(inv);
         new BukkitRunnable() {
@@ -257,20 +246,14 @@ public final class CoinflipController implements Listener {
                                 i == winnerIndex ? (won ? NamedTextColor.GREEN : NamedTextColor.RED) : NamedTextColor.GRAY));
                     }
                     if (circle) {
-                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD,
-                                "The pointer landed on " + winnerName + "."));
-                        inv.setItem(22, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
-                                won ? "Victory" : "Defeat", won ? NamedTextColor.GREEN : NamedTextColor.RED,
-                                "The top pointer decides the result."));
+                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD));
                     } else {
-                        inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD,
-                                "The center head is the winner."));
-                        inv.setItem(31, item(Material.GOLD_BLOCK, "▲  CENTER RESULT  ▲", NamedTextColor.GOLD,
-                                "The reel stopped on " + winnerName + "."));
+                        inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD));
+                        inv.setItem(31, item(Material.GOLD_BLOCK, "▲  RESULT  ▲", NamedTextColor.GOLD));
                     }
                     inv.setItem(49, item(won ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
                             won ? "You won • payout " + money(amount) : "You lost • stake " + money(amount), won ? NamedTextColor.GREEN : NamedTextColor.RED,
-                            "Odds: 50 / 50", "Opponent: " + opponent, "Click to return to the lobby."));
+                            "Opponent: " + opponent, "Click to return."));
                     player.playSound(player.getLocation(), won ? Sound.ENTITY_PLAYER_LEVELUP : Sound.BLOCK_NOTE_BLOCK_BASS, .8f, won ? 1.2f : .7f);
                     cancel();
                 }
@@ -286,7 +269,6 @@ public final class CoinflipController implements Listener {
         ItemMeta meta=head.getItemMeta(); meta.lore(List.of(Component.text("Stake: " + money(listing.amount), NamedTextColor.GOLD),
                 Component.text("Win chance: 50%", NamedTextColor.AQUA),
                 Component.text("Winner receives: " + money(listing.payout), NamedTextColor.GREEN),
-                Component.text("Profit if you win: " + money(Math.max(0, listing.payout - listing.amount)), NamedTextColor.GREEN),
                 Component.text(listing.isMine(viewer) ? "Click to cancel and refund" : "Click to match", listing.isMine(viewer) ? NamedTextColor.RED : NamedTextColor.YELLOW)));
         head.setItemMeta(meta); return head;
     }
