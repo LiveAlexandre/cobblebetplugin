@@ -11,6 +11,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public final class SocketOwnerConsoleListener extends SocketMessageListener {
@@ -44,10 +46,30 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                 }
                 case "ownerConsoleComplete" -> {
                     String command = text(json, "command", 256).replaceFirst("^/+", "");
-                    List<String> suggestions = Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), command);
+                    Set<String> suggestions = new LinkedHashSet<>();
+                    List<String> direct = Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), command);
+                    if (direct != null) suggestions.addAll(direct);
+                    List<String> slashed = Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), "/" + command);
+                    if (slashed != null) suggestions.addAll(slashed);
+                    String first = command.toLowerCase().split("\\s+", 2)[0];
+                    for (String known : List.of("announce", "ban", "ban-ip", "cobble", "cobblebet", "gamemode", "gamerule", "give", "kick", "killall", "list", "pardon", "reload", "say", "stop", "teleport", "time", "weather", "whitelist")) {
+                        if (known.startsWith(first)) suggestions.add(known);
+                    }
                     JsonArray values = new JsonArray();
-                    suggestions.stream().limit(20).forEach(values::add);
+                    suggestions.stream().map(value -> value.replaceFirst("^/+", "")).limit(20).forEach(values::add);
                     result.add("suggestions", values);
+                    result.addProperty("success", true);
+                }
+                case "ownerConsoleSnapshot" -> {
+                    JsonArray players = new JsonArray();
+                    Bukkit.getOnlinePlayers().forEach(player -> {
+                        JsonObject entry = new JsonObject();
+                        entry.addProperty("uuid", player.getUniqueId().toString());
+                        entry.addProperty("name", player.getName());
+                        entry.addProperty("balance", Main.getInstance().getEconomyManager().getBalance(player));
+                        players.add(entry);
+                    });
+                    result.add("players", players);
                     result.addProperty("success", true);
                 }
                 case "ownerWalletSet" -> {

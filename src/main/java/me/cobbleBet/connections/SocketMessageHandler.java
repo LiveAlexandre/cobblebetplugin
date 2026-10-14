@@ -49,6 +49,7 @@ public class SocketMessageHandler {
         listeners.add(new SocketOwnerConsoleListener("ownerConsoleChat", client));
         listeners.add(new SocketOwnerConsoleListener("ownerConsoleComplete", client));
         listeners.add(new SocketOwnerConsoleListener("ownerWalletSet", client));
+        listeners.add(new SocketOwnerConsoleListener("ownerConsoleSnapshot", client));
         listeners.add(new SocketApprovalRejectedListener("approvalRejected", client));
     }
 
