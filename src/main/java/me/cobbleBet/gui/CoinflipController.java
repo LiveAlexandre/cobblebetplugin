@@ -32,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class CoinflipController implements Listener {
     private static final int[] LISTING_SLOTS = {10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34};
-    private static final int[] CIRCLE_SLOTS = {11,12,13,14,15,24,33,42,41,40,39,38,29,20};
+    private static final int[] CIRCLE_SLOTS = {12,13,14,24,33,42,50,49,48,38,29,20};
     private static final int[] REEL_SLOTS = {19,20,21,22,23,24,25};
     private static final DecimalFormat MONEY = new DecimalFormat("#,##0.##");
     private final Main plugin;
@@ -213,15 +213,14 @@ public final class CoinflipController implements Listener {
     public void reveal(Player player, boolean won, double amount, String opponent) {
         boolean circle = !"reel".equalsIgnoreCase(plugin.getConfig().getString("websiteCustomization.gameRules.coinflip.spinStyle", "circle"));
         int[] track = circle ? CIRCLE_SLOTS : REEL_SLOTS;
-        int winnerIndex = circle ? 2 : 3;
+        int winnerIndex = circle ? 1 : 3;
         MenuHolder holder = new MenuHolder(Kind.REVEAL, 0, null, false);
-        Inventory inv = Bukkit.createInventory(holder, 54, Component.text(circle ? "Coinflip • Circular spin" : "Coinflip • Center reel", NamedTextColor.GOLD)); holder.inventory=inv;
+        Inventory inv = Bukkit.createInventory(holder, 54, Component.text("Coinflip", NamedTextColor.GOLD)); holder.inventory=inv;
         fill(inv, Material.BLACK_STAINED_GLASS_PANE);
         OfflinePlayer self = player; OfflinePlayer other = Bukkit.getOfflinePlayer(opponent);
         if (circle) {
             inv.setItem(4, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
-            inv.setItem(21, head(self, player.getName(), NamedTextColor.AQUA));
-            inv.setItem(23, head(other, opponent, NamedTextColor.LIGHT_PURPLE));
+            inv.setItem(22, item(Material.GOLD_INGOT, "▲  WINNER  ▲", NamedTextColor.GOLD));
         } else {
             inv.setItem(13, item(Material.GOLD_INGOT, "▼  WINNER  ▼", NamedTextColor.GOLD));
             inv.setItem(31, item(Material.GOLD_INGOT, "▲  WINNER  ▲", NamedTextColor.GOLD));
@@ -246,7 +245,8 @@ public final class CoinflipController implements Listener {
                                 i == winnerIndex ? (won ? NamedTextColor.GREEN : NamedTextColor.RED) : NamedTextColor.GRAY));
                     }
                     if (circle) {
-                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD));
+                        inv.setItem(4, item(Material.GOLD_BLOCK, "▼  WINNER  ▼", NamedTextColor.GOLD));
+                        inv.setItem(22, item(Material.GOLD_BLOCK, "▲  WINNER  ▲", NamedTextColor.GOLD));
                     } else {
                         inv.setItem(13, item(Material.GOLD_BLOCK, "▼  " + winnerName + " WINS  ▼", NamedTextColor.GOLD));
                         inv.setItem(31, item(Material.GOLD_BLOCK, "▲  RESULT  ▲", NamedTextColor.GOLD));
