@@ -32,15 +32,14 @@ public final class PhysicalModelProtectionListener implements Listener {
     private void protect(String commandLine) {
         if (!isKillAll(commandLine) || rebuildScheduled) return;
         rebuildScheduled = true;
-        for (long delay : new long[]{2L, 20L, 60L}) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            try {
                 plugin.reloadPhysicalModels();
-                if (delay == 60L) {
-                    rebuildScheduled = false;
-                    plugin.getLogger().info("Restored CobbleBet 3D models after /killall.");
-                }
-            }, delay);
-        }
+                plugin.getLogger().info("Restored CobbleBet 3D models after /killall.");
+            } finally {
+                rebuildScheduled = false;
+            }
+        }, 40L);
     }
 
     static boolean isKillAll(String commandLine) {

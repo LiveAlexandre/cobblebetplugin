@@ -121,6 +121,7 @@ public final class CoinflipBoardManager implements Listener {
 
     private void spawn(Board board) {
         World world=board.location.getWorld();if(world==null)return;
+        BoardView duplicate=boards.remove(board.id);if(duplicate!=null){duplicate.remove();plugin.getLogger().warning("Removed a duplicate Coinflip model with ID "+board.id+".");}
         List<Entity> entities=new ArrayList<>();float face=board.location.getYaw()+180;
 
         // Precise display geometry keeps the model straight and properly joined.
@@ -145,6 +146,7 @@ public final class CoinflipBoardManager implements Listener {
             entities.add(hit);
         }
         TextDisplay footer=text(world,point(board.location,0,1.24,.19),face,Color.fromARGB(145,5,5,5),.78f);entities.add(footer);
+        PhysicalModelEntityCleaner.mark(plugin,entities,"coinflip:"+board.id);
         BoardView view=new BoardView(board,header,rows,footer,entities);boards.put(board.id,view);view.update();
     }
 

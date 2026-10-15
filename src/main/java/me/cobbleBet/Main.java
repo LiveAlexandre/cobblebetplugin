@@ -12,6 +12,7 @@ import me.cobbleBet.services.ServerStatusService;
 import me.cobbleBet.storage.PlayerWalletStorage;
 import me.cobbleBet.storage.PluginDataStore;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
+import me.cobbleBet.visuals.PhysicalModelEntityCleaner;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
@@ -181,6 +182,8 @@ public final class Main extends JavaPlugin {
     }
 
     public void reloadPhysicalModels() {
+        int removed = PhysicalModelEntityCleaner.removeStale(this);
+        if (removed > 0) getLogger().info("Removed " + removed + " stale CobbleBet model entities before rebuilding.");
         if (coinflipBoardManager != null) coinflipBoardManager.load();
         if (blackjackTableManager != null) blackjackTableManager.load();
         if (minesFieldManager != null) minesFieldManager.load();
