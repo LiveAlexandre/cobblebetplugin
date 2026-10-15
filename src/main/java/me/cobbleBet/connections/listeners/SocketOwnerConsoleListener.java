@@ -40,7 +40,7 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                 case "ownerConsoleChat" -> {
                     String message = text(json, "message", 256);
                     if (message.isBlank()) throw new IllegalArgumentException("Enter a chat message first.");
-                    Bukkit.broadcast(Component.text("[CobbleBet Owner] ", NamedTextColor.GOLD).append(Component.text(message, NamedTextColor.WHITE)));
+                    Bukkit.broadcast(Component.text("[Broadcast] ", NamedTextColor.GOLD).append(Component.text(message, NamedTextColor.WHITE)));
                     result.addProperty("success", true);
                     result.addProperty("message", "Message broadcast to online players.");
                 }
