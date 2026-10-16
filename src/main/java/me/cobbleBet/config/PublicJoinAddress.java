@@ -19,8 +19,9 @@ public final class PublicJoinAddress {
         String configured = normalize(plugin.getConfig().getString("publicAddress", ""));
         if (configured != null && !configured.isBlank()) return new Detection(configured, "configured");
 
-        String allocationIp = usableHost(System.getenv("SERVER_IP"));
-        int allocationPort = validPort(System.getenv("SERVER_PORT"));
+        String allocationIp = firstUsableHost("SERVER_IP", "P_SERVER_IP", "PUBLIC_IP", "EXTERNAL_IP");
+        int allocationPort = firstValidPort("SERVER_PORT", "P_SERVER_PORT", "PUBLIC_PORT", "EXTERNAL_PORT");
+        if (allocationPort < 1) allocationPort = Bukkit.getPort();
         if (!allocationIp.isBlank() && allocationPort > 0) {
             return new Detection(withPort(allocationIp, allocationPort), "host-allocation");
         }
@@ -55,7 +56,43 @@ public final class PublicJoinAddress {
             String bracketed = host.startsWith("[") && host.endsWith("]") ? host : "[" + host + "]";
             return IPV6.matcher(bracketed).matches() ? bracketed : "";
         }
-        return HOST.matcher(host).matches() ? host : "";
+        if (!HOST.matcher(host).matches()) return "";
+        if (host.matches("\\d{1,3}(?:\\.\\d{1,3}){3}")) return isPublicIpv4(host) ? host : "";
+        return host;
+    }
+
+    private static String firstUsableHost(String... names) {
+        for (String name : names) {
+            String host = usableHost(System.getenv(name));
+            if (!host.isBlank()) return host;
+        }
+        return "";
+    }
+
+    private static int firstValidPort(String... names) {
+        for (String name : names) {
+            int port = validPort(System.getenv(name));
+            if (port > 0) return port;
+        }
+        return -1;
+    }
+
+    private static boolean isPublicIpv4(String host) {
+        String[] parts = host.split("\\.");
+        if (parts.length != 4) return false;
+        int[] octets = new int[4];
+        try {
+            for (int i = 0; i < 4; i++) {
+                octets[i] = Integer.parseInt(parts[i]);
+                if (octets[i] < 0 || octets[i] > 255) return false;
+            }
+        } catch (NumberFormatException ignored) { return false; }
+        return octets[0] != 0 && octets[0] != 10 && octets[0] != 127
+                && !(octets[0] == 169 && octets[1] == 254)
+                && !(octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31)
+                && !(octets[0] == 192 && octets[1] == 168)
+                && !(octets[0] == 100 && octets[1] >= 64 && octets[1] <= 127)
+                && octets[0] < 224;
     }
 
     private static int validPort(String value) {
