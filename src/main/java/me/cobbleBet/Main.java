@@ -59,7 +59,7 @@ public final class Main extends JavaPlugin {
     // PREMIUM
     // =========================
     public static String cobblebetToken;
-    public static boolean premiumEnabled;
+    public static boolean premiumEnabled = false;
     public static String serverDisplayName;
     public static String publicJoinAddress;
     public static String publicJoinAddressSource;
@@ -189,6 +189,13 @@ public final class Main extends JavaPlugin {
         if (minesFieldManager != null) minesFieldManager.load();
         if (plinkoBoardManager != null) plinkoBoardManager.load();
         if (rouletteTableManager != null) rouletteTableManager.load();
+    }
+
+    public void applyPlusStatus(boolean active) {
+        if (premiumEnabled == active) return;
+        premiumEnabled = active;
+        reloadPhysicalModels();
+        getLogger().info("CobbleBet Plus " + (active ? "enabled" : "disabled") + " for server " + serverId + ".");
     }
 
     public void setOfficialPluginRelease(String version, String jarName, String sha256, boolean autoUpdateAllowed, String downloadUrl) {

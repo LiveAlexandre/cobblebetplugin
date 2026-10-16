@@ -75,7 +75,8 @@ serverName: ""
 publicAddress: ""
 
 # Enables premium features if token is valid
-premiumEnabled: true
+# CobbleBet Plus is verified by cobblebet.com against this server's permanent UUID.
+# It cannot be enabled from this local config.
 
 
 # ----------------------------------------

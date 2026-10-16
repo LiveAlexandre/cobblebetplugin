@@ -83,7 +83,7 @@ public class CobbleBetCommand implements CommandExecutor, TabCompleter {
             if (!coinflip&&!blackjack) { sender.sendMessage("§eUsage: /cobblebet game <coinflip|blackjack>"); return true; }
             if (args.length == 2) { if(coinflip)Main.getInstance().menuController.openCoinflipBoards(player);else Main.getInstance().menuController.openBlackjackTables(player); return true; }
             if (args[2].equalsIgnoreCase("create")) {
-                String style=args.length>=4?args[3]:(coinflip?"street":"casino");
+                String style=args.length>=4?args[3]:"classic";
                 if(coinflip){String name=args.length>=5?String.join(" ",java.util.Arrays.copyOfRange(args,4,args.length)):"COINFLIP";Main.getInstance().coinflipBoardManager.create(player,style,name);}
                 else{boolean hasMode=args.length>=5&&(args[4].equalsIgnoreCase("gui")||args[4].equalsIgnoreCase("world")||args[4].equalsIgnoreCase("physical"));String mode=hasMode?args[4]:"gui";int nameStart=hasMode?5:4;String name=args.length>nameStart?String.join(" ",java.util.Arrays.copyOfRange(args,nameStart,args.length)):"BLACKJACK";Main.getInstance().blackjackTableManager.create(player,style,mode,name);}return true;
             }

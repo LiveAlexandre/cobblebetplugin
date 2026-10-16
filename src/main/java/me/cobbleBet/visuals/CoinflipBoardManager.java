@@ -39,6 +39,7 @@ public final class CoinflipBoardManager implements Listener {
                 World world = Bukkit.getWorld(String.valueOf(map.get("world")));
                 Style style = Style.parse(String.valueOf(map.get("style")));
                 if (world == null || style == null) continue;
+                style = PremiumModels.loaded(style, Style.CLASSIC);
                 double savedY=number(map.get("y"));
                 int modelVersion=map.get("modelVersion") instanceof Number version?version.intValue():1;
                 if(modelVersion==1)savedY=Math.floor(savedY)+.03;
@@ -55,6 +56,7 @@ public final class CoinflipBoardManager implements Listener {
     public void create(Player player, String styleName, String name) {
         Style style = Style.parse(styleName);
         if (style == null) { player.sendMessage("§cUnknown style. Choose: " + String.join(", ", styles())); return; }
+        if (!PremiumModels.allowed(player, style.id)) return;
         Board board = new Board(nextId(), placement(player), style,
                 name == null || name.isBlank() ? "COINFLIP" : name.substring(0, Math.min(28, name.length())));
         spawn(board); save();
@@ -86,12 +88,14 @@ public final class CoinflipBoardManager implements Listener {
         BoardView view = find(id); if (view == null) return missing(player, id);
         Style style = Style.parse(styleName);
         if (style == null) { player.sendMessage("§cUnknown style. Choose: " + String.join(", ", styles())); return false; }
+        if (!PremiumModels.allowed(player, style.id)) return false;
         respawn(view, new Board(view.board.id, view.board.location.clone(), style, view.board.name));
         player.sendMessage("§aBoard §f" + view.board.id + " §anow uses §f" + style.id + "§a."); return true;
     }
 
     public boolean cycleStyle(Player player, String id) {
         BoardView view = find(id); if (view == null) return missing(player, id);
+        if (!Main.premiumEnabled) { player.sendMessage("§6CobbleBet Plus is required to cycle model skins."); return false; }
         Style[] values = Style.values(); return changeStyle(player, id, values[(view.board.style.ordinal()+1)%values.length].id);
     }
 
@@ -109,7 +113,7 @@ public final class CoinflipBoardManager implements Listener {
     }
 
     public void updateListings(List<CoinflipController.Listing> next) { listings=List.copyOf(next);boards.values().forEach(BoardView::update); }
-    public Set<String> styles(){return new LinkedHashSet<>(Arrays.stream(Style.values()).map(style->style.id).toList());}
+    public Set<String> styles(){return PremiumModels.styles("street", "royal", "copper");}
     public List<BoardSummary> summaries(){return boards.values().stream().map(view->view.board.summary()).toList();}
     public BoardSummary summary(String id){BoardView view=find(id);return view==null?null:view.board.summary();}
     public void clearAll(){clearEntities();boards.clear();}

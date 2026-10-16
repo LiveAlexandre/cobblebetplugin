@@ -25,7 +25,6 @@ public final class CobbleBetSettings {
         Main.publicJoinAddress = joinAddress.address();
         Main.publicJoinAddressSource = joinAddress.source();
         Main.serverId = plugin.getDataStore().getString("serverId", "").trim();
-        Main.premiumEnabled = plugin.getConfig().getBoolean("premiumEnabled", false);
         Main.broadcastingEnabled = plugin.getConfig().getBoolean("broadcastingEnabled", true);
         Main.broadcastPrefix = plugin.getConfig().getString("broadcastPrefix", "<blue><bold>CobbleBet</bold> »");
         Main.bigWinThreshold = plugin.getConfig().getLong("bigWinThreshold", 500L);

@@ -37,6 +37,7 @@ public final class RouletteTableManager implements Listener {
                 World world = Bukkit.getWorld(String.valueOf(row.get("world")));
                 Style style = Style.parse(String.valueOf(row.get("style")));
                 if (world == null || style == null) continue;
+                style = PremiumModels.loaded(style, Style.CLASSIC);
                 Location location = new Location(world, number(row.get("x")), number(row.get("y")), number(row.get("z")), (float) number(row.get("yaw")), 0);
                 String id = String.valueOf(row.get("id")), name = cleanName(String.valueOf(row.get("name")));
                 boolean glowing = Boolean.parseBoolean(String.valueOf(row.get("glowing")));
@@ -48,6 +49,7 @@ public final class RouletteTableManager implements Listener {
     public boolean create(Player player, String styleName, String name) {
         Style style = Style.parse(styleName);
         if (style == null) { player.sendMessage("§cUnknown Roulette style. Use: " + String.join(", ", styles())); return false; }
+        if (!PremiumModels.allowed(player, style.id)) return false;
         Table table = new Table(nextId(), placement(player), style, cleanName(name), false);
         spawn(table); save(); player.sendMessage("§aCreated Roulette table §f" + table.name + " §7[" + table.id + "]§a."); return true;
     }
@@ -55,12 +57,12 @@ public final class RouletteTableManager implements Listener {
     public boolean moveHere(Player player, String id) { View view = available(player, id); if (view == null) return false; replace(view, new Table(view.table.id, placement(player), view.table.style, view.table.name, view.table.glowing)); return true; }
     public boolean moveThere(Player player, String id) { View view = available(player, id); if (view == null) return false; Location location=targetPlacement(player); if(location==null){player.sendMessage("§cLook at a block within 30 blocks.");return false;} replace(view,new Table(view.table.id,location,view.table.style,view.table.name,view.table.glowing)); return true; }
     public boolean rotateByDegrees(Player player, String id, float degrees) { View view = available(player, id); if (view == null) return false; Location location = view.table.location.clone(); location.setYaw(Math.round((location.getYaw() + degrees) / 22.5f) * 22.5f); replace(view, new Table(view.table.id, location, view.table.style, view.table.name, view.table.glowing)); return true; }
-    public boolean changeStyle(Player player, String id, String styleName) { View view = available(player, id); Style style = Style.parse(styleName); if (view == null) return false; if (style == null) { player.sendMessage("§cUnknown Roulette style."); return false; } replace(view, new Table(view.table.id, view.table.location, style, view.table.name, view.table.glowing)); return true; }
+    public boolean changeStyle(Player player, String id, String styleName) { View view = available(player, id); Style style = Style.parse(styleName); if (view == null) return false; if (style == null) { player.sendMessage("§cUnknown Roulette style."); return false; } if (!PremiumModels.allowed(player, style.id)) return false; replace(view, new Table(view.table.id, view.table.location, style, view.table.name, view.table.glowing)); return true; }
     public boolean toggleGlow(Player player, String id) { View view = available(player, id); if (view == null) return false; replace(view, new Table(view.table.id, view.table.location, view.table.style, view.table.name, !view.table.glowing)); return true; }
     public boolean rename(Player player, String id, String name) { View view = available(player, id); if (view == null) return false; replace(view, new Table(view.table.id, view.table.location, view.table.style, cleanName(name), view.table.glowing)); return true; }
     public boolean remove(Player player, String id) { View view = available(player, id); if (view == null) return false; view.remove(); tables.remove(view.table.id); activePlayers.remove(view.table.id); save(); return true; }
 
-    public Set<String> styles() { return new LinkedHashSet<>(Arrays.stream(Style.values()).map(style -> style.id).toList()); }
+    public Set<String> styles() { return PremiumModels.styles("royal", "modern", "nether"); }
     public List<TableSummary> summaries() { return tables.values().stream().map(view -> view.table.summary()).toList(); }
     public TableSummary summary(String id) { View view = find(id); return view == null ? null : view.table.summary(); }
     public void clearAll() { tables.values().forEach(View::remove); tables.clear(); activePlayers.clear(); }

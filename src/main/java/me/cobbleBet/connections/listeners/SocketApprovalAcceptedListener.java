@@ -14,9 +14,11 @@ public class SocketApprovalAcceptedListener extends SocketMessageListener {
         String sha256 = json.has("pluginSha256") ? json.get("pluginSha256").getAsString() : "";
         String downloadUrl = json.has("pluginDownloadUrl") ? json.get("pluginDownloadUrl").getAsString() : "";
         boolean autoUpdateAllowed = json.has("pluginAutoUpdateAllowed") && json.get("pluginAutoUpdateAllowed").getAsBoolean();
+        boolean plusActive = json.has("plusActive") && json.get("plusActive").getAsBoolean();
         plugin.setOfficialPluginRelease(version, jarName, sha256, autoUpdateAllowed, downloadUrl);
         client.markApproved();
         Bukkit.getScheduler().runTask(plugin, () -> {
+            plugin.applyPlusStatus(plusActive);
             plugin.sendServerStatus();
             if (plugin.coinflipController != null) plugin.coinflipController.requestLobby();
         });

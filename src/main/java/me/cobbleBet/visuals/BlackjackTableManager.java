@@ -39,6 +39,7 @@ public final class BlackjackTableManager implements Listener {
                 Style style = Style.parse(String.valueOf(map.get("style")));
                 PlayMode mode = PlayMode.parse(String.valueOf(map.get("playMode")));
                 if (world == null || style == null) continue;
+                style = PremiumModels.loaded(style, Style.CLASSIC);
                 if (mode == null) mode = PlayMode.GUI;
                 float yaw = Math.round((float) number(map.get("yaw")) / 22.5f) * 22.5f;
                 boolean glowing = Boolean.parseBoolean(String.valueOf(map.get("glowing")));
@@ -54,6 +55,7 @@ public final class BlackjackTableManager implements Listener {
         Style style = Style.parse(styleName);
         PlayMode mode = PlayMode.parse(modeName);
         if (style == null || mode == null) { player.sendMessage("§cChoose a valid Blackjack style and play mode."); return; }
+        if (!PremiumModels.allowed(player, style.id)) return;
         Table table = new Table(nextId(), placement(player), style, mode, cleanName(name), false);
         spawn(table); save();
         player.sendMessage("§aCreated Blackjack table §f" + table.id + "§a in §f" + mode.id + " §amode.");
@@ -73,6 +75,7 @@ public final class BlackjackTableManager implements Listener {
     public boolean changeStyle(Player player, String id, String value) {
         View view = available(player, id); Style style = Style.parse(value); if (view == null) return false;
         if (style == null) { player.sendMessage("§cUnknown style. Choose: " + String.join(", ", styles())); return false; }
+        if (!PremiumModels.allowed(player, style.id)) return false;
         replace(view, new Table(view.table.id, view.table.location.clone(), style, view.table.mode, view.table.name, view.table.glowing)); return true;
     }
     public boolean changeMode(Player player, String id, String value) {
@@ -103,7 +106,7 @@ public final class BlackjackTableManager implements Listener {
         view.remove(); tables.remove(view.table.id); activePlayers.remove(view.table.id); save(); return true;
     }
 
-    public Set<String> styles() { return new LinkedHashSet<>(Arrays.stream(Style.values()).map(style -> style.id).toList()); }
+    public Set<String> styles() { return PremiumModels.styles("saloon", "royal", "modern"); }
     public List<TableSummary> summaries() { return tables.values().stream().map(view -> view.table.summary()).toList(); }
     public TableSummary summary(String id) { View view = find(id); return view == null ? null : view.table.summary(); }
     public void clearAll() { tables.values().forEach(View::remove); tables.clear(); activePlayers.clear(); }
@@ -246,12 +249,12 @@ public final class BlackjackTableManager implements Listener {
     public record TableSummary(String id, String name, String style, String playMode, boolean glowing, float yaw, String world, int x, int y, int z) { public String locationText() { return world + " · " + x + ", " + y + ", " + z; } }
     private enum PlayMode { GUI("gui"), WORLD("world"); final String id; PlayMode(String id) { this.id = id; } static PlayMode parse(String value) { for (PlayMode mode : values()) if (mode.id.equalsIgnoreCase(value) || mode == WORLD && "physical".equalsIgnoreCase(value)) return mode; return null; } }
     private enum Style {
-        CASINO("casino", Material.DARK_OAK_PLANKS, Material.POLISHED_BLACKSTONE, Material.GREEN_CONCRETE, Material.DARK_OAK_LOG, Material.GOLD_BLOCK, Material.GOLD_NUGGET, Material.EMERALD, NamedTextColor.GOLD, Color.YELLOW),
+        CLASSIC("classic", Material.DARK_OAK_PLANKS, Material.POLISHED_BLACKSTONE, Material.GREEN_CONCRETE, Material.DARK_OAK_LOG, Material.GOLD_BLOCK, Material.GOLD_NUGGET, Material.EMERALD, NamedTextColor.GOLD, Color.YELLOW),
         SALOON("saloon", Material.SPRUCE_PLANKS, Material.DARK_OAK_PLANKS, Material.GREEN_WOOL, Material.SPRUCE_LOG, Material.COPPER_BLOCK, Material.COPPER_INGOT, Material.GOLD_NUGGET, NamedTextColor.YELLOW, Color.ORANGE),
         ROYAL("royal", Material.PURPLE_CONCRETE, Material.GILDED_BLACKSTONE, Material.BLUE_CONCRETE, Material.POLISHED_BLACKSTONE, Material.AMETHYST_BLOCK, Material.AMETHYST_SHARD, Material.GOLD_NUGGET, NamedTextColor.LIGHT_PURPLE, Color.PURPLE),
         MODERN("modern", Material.SMOOTH_QUARTZ, Material.IRON_BLOCK, Material.CYAN_CONCRETE, Material.QUARTZ_PILLAR, Material.SEA_LANTERN, Material.DIAMOND, Material.IRON_NUGGET, NamedTextColor.AQUA, Color.AQUA);
         final String id; final Material base, rail, felt, leg, trim, chipA, chipB; final NamedTextColor accent; final Color glow;
         Style(String id, Material base, Material rail, Material felt, Material leg, Material trim, Material chipA, Material chipB, NamedTextColor accent, Color glow) { this.id = id; this.base = base; this.rail = rail; this.felt = felt; this.leg = leg; this.trim = trim; this.chipA = chipA; this.chipB = chipB; this.accent = accent; this.glow = glow; }
-        static Style parse(String value) { for (Style style : values()) if (style.id.equalsIgnoreCase(value)) return style; return null; }
+        static Style parse(String value) { if ("casino".equalsIgnoreCase(value)) return CLASSIC; for (Style style : values()) if (style.id.equalsIgnoreCase(value)) return style; return null; }
     }
 }

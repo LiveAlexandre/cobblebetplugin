@@ -35,6 +35,7 @@ public final class PlinkoBoardManager implements Listener {
         for (Map<?, ?> row : plugin.getDataStore().getMapList("physicalGames.plinko.boards")) try {
             World world = Bukkit.getWorld(String.valueOf(row.get("world"))); Style style = Style.parse(String.valueOf(row.get("style")));
             if (world == null || style == null) continue;
+            style = PremiumModels.loaded(style, Style.CLASSIC);
             float yaw = Math.round((float) number(row.get("yaw")) / 22.5f) * 22.5f;
             spawn(new Board(String.valueOf(row.get("id")), new Location(world, number(row.get("x")), number(row.get("y")), number(row.get("z")), yaw, 0), style, cleanName(String.valueOf(row.get("name"))), Boolean.parseBoolean(String.valueOf(row.get("glowing")))));
         } catch (RuntimeException error) { plugin.getLogger().warning("Skipped an invalid Plinko board: " + error.getMessage()); }
@@ -42,12 +43,13 @@ public final class PlinkoBoardManager implements Listener {
 
     public void create(Player player, String styleName, String name) {
         Style style = Style.parse(styleName); if (style == null) { player.sendMessage("§cChoose a valid Plinko style."); return; }
+        if (!PremiumModels.allowed(player, style.id)) return;
         Board board = new Board(nextId(), placement(player), style, cleanName(name), false); spawn(board); save();
         player.sendMessage("§aCreated world Plinko board §f" + board.id + "§a.");
     }
     public boolean moveHere(Player player, String id) { View view = available(player, id); if (view == null) return false; replace(view, new Board(view.board.id, placement(player), view.board.style, view.board.name, view.board.glowing)); return true; }
     public boolean moveThere(Player player, String id) { View view = available(player, id); if (view == null) return false; Location location=targetPlacement(player); if(location==null){player.sendMessage("§cLook at a block within 30 blocks.");return false;} replace(view,new Board(view.board.id,location,view.board.style,view.board.name,view.board.glowing)); return true; }
-    public boolean changeStyle(Player player, String id, String value) { View view = available(player, id); Style style = Style.parse(value); if (view == null) return false; if (style == null) { player.sendMessage("§cUnknown Plinko style."); return false; } replace(view, new Board(view.board.id, view.board.location.clone(), style, view.board.name, view.board.glowing)); return true; }
+    public boolean changeStyle(Player player, String id, String value) { View view = available(player, id); Style style = Style.parse(value); if (view == null) return false; if (style == null) { player.sendMessage("§cUnknown Plinko style."); return false; } if (!PremiumModels.allowed(player, style.id)) return false; replace(view, new Board(view.board.id, view.board.location.clone(), style, view.board.name, view.board.glowing)); return true; }
     public boolean toggleGlow(Player player, String id) { View view = available(player, id); if (view == null) return false; replace(view, new Board(view.board.id, view.board.location.clone(), view.board.style, view.board.name, !view.board.glowing)); return true; }
     public boolean rotate(Player player, String id, int quarterTurns) { View view = available(player, id); if (view == null) return false; Location location = view.board.location.clone(); location.setYaw(Math.round((location.getYaw() + quarterTurns * 90f) / 90f) * 90f); replace(view, new Board(view.board.id, location, view.board.style, view.board.name, view.board.glowing)); return true; }
     public boolean rotateByDegrees(Player player, String id, float degrees) { View view = available(player, id); if (view == null) return false; Location location = view.board.location.clone(); location.setYaw(Math.round((location.getYaw() + degrees) / 22.5f) * 22.5f); replace(view, new Board(view.board.id, location, view.board.style, view.board.name, view.board.glowing)); return true; }
@@ -55,7 +57,7 @@ public final class PlinkoBoardManager implements Listener {
     public boolean remove(Player player, String id) { View view = available(player, id); if (view == null) return false; view.remove(); boards.remove(view.board.id); activePlayers.remove(view.board.id); save(); return true; }
     public List<BoardSummary> summaries() { return boards.values().stream().map(view -> view.board.summary()).toList(); }
     public BoardSummary summary(String id) { View view = find(id); return view == null ? null : view.board.summary(); }
-    public Set<String> styles() { return new LinkedHashSet<>(Arrays.stream(Style.values()).map(style -> style.id).toList()); }
+    public Set<String> styles() { return PremiumModels.styles("arcade", "royal", "industrial"); }
 
     private void spawn(Board board) {
         World world = board.location.getWorld(); if (world == null) return; float face = board.location.getYaw() + 180; List<Entity> entities = new ArrayList<>();
