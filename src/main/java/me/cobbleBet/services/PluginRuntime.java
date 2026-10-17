@@ -11,6 +11,7 @@ import me.cobbleBet.gui.CoinflipController;
 import me.cobbleBet.gui.MinesController;
 import me.cobbleBet.gui.PlinkoController;
 import me.cobbleBet.gui.RouletteController;
+import me.cobbleBet.integrations.PlaceholderApiIntegration;
 import me.cobbleBet.listeners.GamblingPageActivityListener;
 import me.cobbleBet.listeners.GambleServerLinkListener;
 import me.cobbleBet.listeners.PhysicalModelProtectionListener;
@@ -60,6 +61,8 @@ public final class PluginRuntime {
         register(plugin, new PhysicalModelProtectionListener(plugin));
         register(plugin, new OwnerActivityListener(plugin));
         register(plugin, new JoinAddressDetectionListener(plugin));
+
+        PlaceholderApiIntegration.register(plugin);
 
         plugin.reloadPhysicalModels();
         Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.coinflipController.requestLobby(), 20L * 15L, 20L * 15L);
