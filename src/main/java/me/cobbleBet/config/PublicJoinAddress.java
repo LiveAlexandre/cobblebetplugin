@@ -12,6 +12,7 @@ public final class PublicJoinAddress {
     private static final Pattern HOST = Pattern.compile("^([A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)(?::(\\d{1,5}))?$");
     private static final Pattern IPV6 = Pattern.compile("^\\[([0-9A-Fa-f:]+)](?::(\\d{1,5}))?$");
     private static final Set<String> WILDCARDS = Set.of("0.0.0.0", "::", "[::]", "127.0.0.1", "localhost");
+    private static final String DETECTED_ADDRESS_PATH = "network.detectedJoinAddress";
 
     private PublicJoinAddress() {}
 
@@ -19,9 +20,31 @@ public final class PublicJoinAddress {
         String configured = normalize(plugin.getConfig().getString("publicAddress", ""));
         if (configured != null && !configured.isBlank()) return new Detection(configured, "configured");
 
-        String allocationIp = firstUsableHost("SERVER_IP", "P_SERVER_IP", "PUBLIC_IP", "EXTERNAL_IP");
-        int allocationPort = firstValidPort("SERVER_PORT", "P_SERVER_PORT", "PUBLIC_PORT", "EXTERNAL_PORT");
+        String learned = normalize(plugin.getDataStore().getString(DETECTED_ADDRESS_PATH, ""));
+        if (learned != null && !learned.isBlank() && isUsableAutomaticAddress(learned)) {
+            return new Detection(learned, "player-handshake");
+        }
+
+        String completeAllocation = firstUsableAddress(
+                "MINECRAFT_SERVER_ADDRESS", "MINECRAFT_ADDRESS", "PUBLIC_ADDRESS",
+                "EXTERNAL_ADDRESS", "SERVER_ADDRESS", "ALLOCATED_ADDRESS"
+        );
+        String allocationIp = firstUsableHost(
+                "SERVER_IP", "P_SERVER_IP", "PUBLIC_IP", "EXTERNAL_IP", "ALLOCATED_IP",
+                "PRIMARY_IP", "MINECRAFT_SERVER_HOST", "MINECRAFT_HOST", "MC_HOST", "PANEL_IP",
+                "MINECRAFT_SERVER_ADDRESS", "MINECRAFT_ADDRESS", "PUBLIC_ADDRESS", "EXTERNAL_ADDRESS",
+                "SERVER_ADDRESS", "ALLOCATED_ADDRESS"
+        );
+        int allocationPort = firstValidPort(
+                "SERVER_PORT", "P_SERVER_PORT", "PUBLIC_PORT", "EXTERNAL_PORT", "ALLOCATED_PORT",
+                "PRIMARY_PORT", "MINECRAFT_SERVER_PORT", "MINECRAFT_PORT", "MC_PORT", "PANEL_PORT"
+        );
         if (allocationPort < 1) allocationPort = Bukkit.getPort();
+        if (!completeAllocation.isBlank()) {
+            String address = hasExplicitPort(completeAllocation) || allocationPort < 1
+                    ? completeAllocation : withPort(completeAllocation, allocationPort);
+            return new Detection(address, "host-allocation");
+        }
         if (!allocationIp.isBlank() && allocationPort > 0) {
             return new Detection(withPort(allocationIp, allocationPort), "host-allocation");
         }
@@ -31,6 +54,61 @@ public final class PublicJoinAddress {
             return new Detection(withPort(binding, Bukkit.getPort()), "server-binding");
         }
         return new Detection("", "unavailable");
+    }
+
+    /**
+     * Learns the address from a real Minecraft handshake. This is more reliable
+     * than the socket's outbound IP for servers behind NAT, a panel, or a proxy.
+     */
+    public static boolean observePlayerHandshake(Main plugin, String hostname, int port) {
+        String configured = normalize(plugin.getConfig().getString("publicAddress", ""));
+        if (configured != null && !configured.isBlank()) return false;
+
+        String candidate = fromHandshake(hostname, port);
+        if (candidate.isBlank() || candidate.equals(Main.publicJoinAddress)
+                && "player-handshake".equals(Main.publicJoinAddressSource)) return false;
+
+        plugin.getDataStore().set(DETECTED_ADDRESS_PATH, candidate);
+        Main.publicJoinAddress = candidate;
+        Main.publicJoinAddressSource = "player-handshake";
+        plugin.getLogger().info("Learned player-facing Minecraft address " + candidate + " from a real player connection.");
+        plugin.sendServerStatus();
+        return true;
+    }
+
+    public static String fromHandshake(String hostname, int port) {
+        if (hostname == null) return "";
+        String raw = hostname.split("\\u0000", 2)[0].trim();
+        while (raw.endsWith(".")) raw = raw.substring(0, raw.length() - 1);
+        if (raw.isBlank()) return "";
+
+        String complete = normalize(raw);
+        if (complete != null && !complete.isBlank() && hasExplicitPort(complete)
+                && isUsableAutomaticAddress(complete)) return complete;
+
+        String host = usableHost(raw);
+        if (host.isBlank()) return "";
+        int safePort = port >= 1 && port <= 65535 ? port : Bukkit.getPort();
+        String candidate = safePort > 0 ? withPort(host, safePort) : host;
+        return isUsableAutomaticAddress(candidate) ? candidate : "";
+    }
+
+    public static String serverSoftware() {
+        String name = Bukkit.getName();
+        try {
+            Class.forName("io.papermc.paper.configuration.GlobalConfiguration", false,
+                    PublicJoinAddress.class.getClassLoader());
+            name = name.toLowerCase(Locale.ROOT).contains("purpur") ? "Purpur" : "Paper";
+        } catch (ClassNotFoundException ignored) {
+            try {
+                Class.forName("org.spigotmc.SpigotConfig", false, PublicJoinAddress.class.getClassLoader());
+                name = "Spigot";
+            } catch (ClassNotFoundException ignoredAgain) {
+                if (name == null || name.isBlank()) name = "Bukkit";
+            }
+        }
+        String minecraft = Bukkit.getMinecraftVersion();
+        return minecraft == null || minecraft.isBlank() ? name : name + " " + minecraft;
     }
 
     public static String normalize(String value) {
@@ -65,6 +143,14 @@ public final class PublicJoinAddress {
         for (String name : names) {
             String host = usableHost(System.getenv(name));
             if (!host.isBlank()) return host;
+        }
+        return "";
+    }
+
+    private static String firstUsableAddress(String... names) {
+        for (String name : names) {
+            String address = normalize(System.getenv(name));
+            if (address != null && !address.isBlank() && isUsableAutomaticAddress(address)) return address;
         }
         return "";
     }
@@ -104,6 +190,23 @@ public final class PublicJoinAddress {
 
     private static String withPort(String host, int port) {
         return port == 25565 ? host : host + ":" + port;
+    }
+
+    private static boolean hasExplicitPort(String address) {
+        Matcher ipv6 = IPV6.matcher(address);
+        if (ipv6.matches()) return ipv6.group(2) != null;
+        Matcher host = HOST.matcher(address);
+        return host.matches() && host.group(2) != null;
+    }
+
+    private static boolean isUsableAutomaticAddress(String address) {
+        Matcher ipv6 = IPV6.matcher(address);
+        Matcher host = HOST.matcher(address);
+        String value;
+        if (ipv6.matches()) value = ipv6.group(1);
+        else if (host.matches()) value = host.group(1);
+        else return false;
+        return !usableHost(value).isBlank();
     }
 
     public record Detection(String address, String source) {}

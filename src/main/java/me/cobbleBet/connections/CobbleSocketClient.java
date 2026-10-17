@@ -37,7 +37,7 @@ public class CobbleSocketClient extends WebSocketClient {
         hello.addProperty("publicJoinAddress", Main.publicJoinAddress == null ? "" : Main.publicJoinAddress);
         hello.addProperty("publicJoinAddressSource", Main.publicJoinAddressSource == null ? "unavailable" : Main.publicJoinAddressSource);
         hello.addProperty("pluginName", "CobbleBet");
-        hello.addProperty("platform", "Minecraft");
+        hello.addProperty("platform", Main.serverSoftware == null ? "Minecraft" : Main.serverSoftware);
         hello.addProperty("pluginVersion", Main.getInstance().getDescription().getVersion());
         hello.addProperty("economyType", Main.economyType);
         hello.addProperty("economyItem", Main.economyItem == null ? "" : Main.economyItem.name());

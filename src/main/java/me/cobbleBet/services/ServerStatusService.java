@@ -35,6 +35,7 @@ public final class ServerStatusService {
         status.addProperty("publicJoinAddress", Main.publicJoinAddress == null ? "" : Main.publicJoinAddress);
         status.addProperty("publicJoinAddressSource", Main.publicJoinAddressSource == null ? "unavailable" : Main.publicJoinAddressSource);
         status.addProperty("pluginName", "CobbleBet");
+        status.addProperty("platform", Main.serverSoftware == null ? "Minecraft" : Main.serverSoftware);
         status.addProperty("pluginVersion", plugin.getDescription().getVersion());
         status.addProperty("protocolVersion", 2);
         status.addProperty("serverUptimeMillis", System.currentTimeMillis() - plugin.getStartedAt());

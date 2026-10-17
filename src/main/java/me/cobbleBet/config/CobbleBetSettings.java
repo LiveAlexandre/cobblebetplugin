@@ -24,6 +24,7 @@ public final class CobbleBetSettings {
         PublicJoinAddress.Detection joinAddress = PublicJoinAddress.resolve(plugin);
         Main.publicJoinAddress = joinAddress.address();
         Main.publicJoinAddressSource = joinAddress.source();
+        Main.serverSoftware = PublicJoinAddress.serverSoftware();
         Main.serverId = plugin.getDataStore().getString("serverId", "").trim();
         Main.broadcastingEnabled = plugin.getConfig().getBoolean("broadcastingEnabled", true);
         Main.broadcastPrefix = plugin.getConfig().getString("broadcastPrefix", "<blue><bold>CobbleBet</bold> »");
