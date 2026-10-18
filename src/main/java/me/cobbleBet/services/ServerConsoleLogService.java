@@ -39,6 +39,14 @@ public final class ServerConsoleLogService {
         return new ArrayList<>(entries);
     }
 
+    public synchronized void record(String level, String logger, String message) {
+        if (message == null) return;
+        message = clean(message);
+        if (message.isEmpty()) return;
+        entries.addFirst(new Entry(System.currentTimeMillis(), normalizeLevel(level), normalizeLogger(logger), message));
+        while (entries.size() > MAX_ENTRIES) entries.removeLast();
+    }
+
     public void close() {
         rootLogger.removeHandler(handler);
     }
@@ -53,15 +61,32 @@ public final class ServerConsoleLogService {
             record.getThrown().printStackTrace(new PrintWriter(trace));
             message += "\n" + trace;
         }
-        message = message.replaceAll("\\u001B\\[[;\\d]*[ -/]*[@-~]", "")
-                .replaceAll("[\\p{Cntrl}&&[^\\n\\t]]", "").trim();
+        message = clean(message);
         if (message.isEmpty()) return;
-        if (message.length() > MAX_MESSAGE_LENGTH) message = message.substring(0, MAX_MESSAGE_LENGTH - 1) + "…";
         String logger = record.getLoggerName();
-        if (logger == null || logger.isBlank()) logger = "Server";
-        if (logger.length() > 80) logger = logger.substring(0, 80);
-        entries.addFirst(new Entry(record.getMillis(), level(record.getLevel()), logger, message));
+        entries.addFirst(new Entry(record.getMillis(), level(record.getLevel()), normalizeLogger(logger), message));
         while (entries.size() > MAX_ENTRIES) entries.removeLast();
+    }
+
+    private static String clean(String message) {
+        String cleaned = message.replaceAll("\\u001B\\[[;\\d]*[ -/]*[@-~]", "")
+                .replaceAll("(?i)§[0-9A-FK-ORX]", "")
+                .replaceAll("[\\p{Cntrl}&&[^\\n\\t]]", "").trim();
+        return cleaned.length() > MAX_MESSAGE_LENGTH ? cleaned.substring(0, MAX_MESSAGE_LENGTH - 1) + "…" : cleaned;
+    }
+
+    private static String normalizeLogger(String logger) {
+        if (logger == null || logger.isBlank()) return "Server";
+        return logger.length() > 80 ? logger.substring(0, 80) : logger;
+    }
+
+    private static String normalizeLevel(String level) {
+        if (level == null) return "info";
+        return switch (level.toLowerCase()) {
+            case "error", "severe" -> "error";
+            case "warning", "warn" -> "warning";
+            default -> "info";
+        };
     }
 
     private static String level(Level level) {

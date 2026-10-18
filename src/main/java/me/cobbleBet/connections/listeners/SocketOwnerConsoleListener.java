@@ -5,11 +5,23 @@ import com.google.gson.JsonObject;
 import me.cobbleBet.Main;
 import me.cobbleBet.connections.CobbleSocketClient;
 import me.cobbleBet.connections.SocketMessageListener;
+import net.kyori.adventure.audience.MessageType;
+import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Server;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.conversations.Conversation;
+import org.bukkit.conversations.ConversationAbandonedEvent;
+import org.bukkit.permissions.Permission;
+import org.bukkit.permissions.PermissionAttachment;
+import org.bukkit.permissions.PermissionAttachmentInfo;
+import org.bukkit.plugin.Plugin;
 
 import java.util.List;
 import java.util.LinkedHashSet;
@@ -34,9 +46,20 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                 case "ownerConsoleCommand" -> {
                     String command = text(json, "command", 256).replaceFirst("^/+", "");
                     if (command.isBlank()) throw new IllegalArgumentException("Enter a command first.");
-                    boolean accepted = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                    String dispatchedCommand = command.replaceFirst("(?i)^playerlist(?=\\s|$)", "list");
+                    CapturingConsoleSender sender = new CapturingConsoleSender(Bukkit.getConsoleSender());
+                    boolean accepted = Bukkit.dispatchCommand(sender, dispatchedCommand);
+                    String output = sender.output();
                     result.addProperty("success", accepted);
-                    result.addProperty("message", accepted ? "Command sent to the server console." : "The server did not recognize that command.");
+                    if (!output.isBlank()) {
+                        result.addProperty("output", output);
+                        result.addProperty("message", output);
+                        if (Main.getInstance().getConsoleLogService() != null) {
+                            Main.getInstance().getConsoleLogService().record("info", "Command /" + command.split("\\s+", 2)[0], output);
+                        }
+                    } else {
+                        result.addProperty("message", accepted ? "Command completed without output." : "The server did not recognize that command.");
+                    }
                 }
                 case "ownerConsoleChat" -> {
                     String message = text(json, "message", 256);
@@ -54,7 +77,7 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                     catch (RuntimeException ignored) {}
                     CompletionPoint point = completionPoint(command);
                     if (point.argument() == 0) {
-                        for (String known : List.of("announce", "ban", "ban-ip", "clear", "cobble", "cobblebet", "deop", "effect", "enchant", "gamemode", "gamerule", "give", "kick", "kill", "killall", "list", "op", "pardon", "reload", "say", "stop", "teleport", "time", "weather", "whitelist")) {
+                        for (String known : List.of("announce", "ban", "ban-ip", "clear", "cobble", "cobblebet", "deop", "effect", "enchant", "gamemode", "gamerule", "give", "help", "kick", "kill", "killall", "list", "op", "pardon", "playerlist", "reload", "say", "stop", "teleport", "time", "weather", "whitelist")) {
                             if (known.startsWith(point.partial().toLowerCase())) suggestions.add(known);
                         }
                     }
@@ -158,6 +181,62 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
             case "teleport", "tp" -> argument == 1 || argument == 2;
             default -> false;
         };
+    }
+
+    private static final class CapturingConsoleSender implements ConsoleCommandSender {
+        private static final int MAX_OUTPUT_LENGTH = 12_000;
+        private final ConsoleCommandSender delegate;
+        private final StringBuilder output = new StringBuilder();
+
+        private CapturingConsoleSender(ConsoleCommandSender delegate) {
+            this.delegate = delegate;
+        }
+
+        private void capture(String message) {
+            if (message == null || output.length() >= MAX_OUTPUT_LENGTH) return;
+            String clean = message.replaceAll("(?i)§[0-9A-FK-ORX]", "")
+                    .replaceAll("\\u001B\\[[;\\d]*[ -/]*[@-~]", "")
+                    .replaceAll("[\\p{Cntrl}&&[^\\n\\t]]", "").trim();
+            if (clean.isEmpty()) return;
+            if (!output.isEmpty()) output.append('\n');
+            int remaining = MAX_OUTPUT_LENGTH - output.length();
+            output.append(clean, 0, Math.min(remaining, clean.length()));
+        }
+
+        private String output() {
+            return output.toString().trim();
+        }
+
+        @Override public void sendMessage(String message) { capture(message); delegate.sendMessage(message); }
+        @Override public void sendMessage(String... messages) { for (String message : messages) sendMessage(message); }
+        @Override public void sendMessage(UUID sender, String message) { capture(message); delegate.sendMessage(sender, message); }
+        @Override public void sendMessage(UUID sender, String... messages) { for (String message : messages) sendMessage(sender, message); }
+        @Override public void sendMessage(Component message) { capture(PlainTextComponentSerializer.plainText().serialize(message)); delegate.sendMessage(message); }
+        @Override public void sendMessage(Identity source, Component message, MessageType type) { capture(PlainTextComponentSerializer.plainText().serialize(message)); delegate.sendMessage(source, message, type); }
+        @Override public void sendRawMessage(String message) { capture(message); delegate.sendRawMessage(message); }
+        @Override public void sendRawMessage(UUID sender, String message) { capture(message); delegate.sendRawMessage(sender, message); }
+        @Override public Server getServer() { return delegate.getServer(); }
+        @Override public String getName() { return delegate.getName(); }
+        @Override public Component name() { return delegate.name(); }
+        @Override public CommandSender.Spigot spigot() { return delegate.spigot(); }
+        @Override public boolean isOp() { return delegate.isOp(); }
+        @Override public void setOp(boolean value) { delegate.setOp(value); }
+        @Override public boolean isPermissionSet(String name) { return delegate.isPermissionSet(name); }
+        @Override public boolean isPermissionSet(Permission permission) { return delegate.isPermissionSet(permission); }
+        @Override public boolean hasPermission(String name) { return delegate.hasPermission(name); }
+        @Override public boolean hasPermission(Permission permission) { return delegate.hasPermission(permission); }
+        @Override public PermissionAttachment addAttachment(Plugin plugin, String name, boolean value) { return delegate.addAttachment(plugin, name, value); }
+        @Override public PermissionAttachment addAttachment(Plugin plugin) { return delegate.addAttachment(plugin); }
+        @Override public PermissionAttachment addAttachment(Plugin plugin, String name, boolean value, int ticks) { return delegate.addAttachment(plugin, name, value, ticks); }
+        @Override public PermissionAttachment addAttachment(Plugin plugin, int ticks) { return delegate.addAttachment(plugin, ticks); }
+        @Override public void removeAttachment(PermissionAttachment attachment) { delegate.removeAttachment(attachment); }
+        @Override public void recalculatePermissions() { delegate.recalculatePermissions(); }
+        @Override public Set<PermissionAttachmentInfo> getEffectivePermissions() { return delegate.getEffectivePermissions(); }
+        @Override public boolean isConversing() { return delegate.isConversing(); }
+        @Override public void acceptConversationInput(String input) { delegate.acceptConversationInput(input); }
+        @Override public boolean beginConversation(Conversation conversation) { return delegate.beginConversation(conversation); }
+        @Override public void abandonConversation(Conversation conversation) { delegate.abandonConversation(conversation); }
+        @Override public void abandonConversation(Conversation conversation, ConversationAbandonedEvent details) { delegate.abandonConversation(conversation, details); }
     }
 
     private record CompletionPoint(String prefix, String partial, String command, int argument) {}
