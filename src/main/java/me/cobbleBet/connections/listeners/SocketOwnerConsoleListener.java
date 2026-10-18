@@ -8,6 +8,7 @@ import me.cobbleBet.connections.SocketMessageListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 
 import java.util.List;
@@ -45,18 +46,31 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                     result.addProperty("message", "Message broadcast to online players.");
                 }
                 case "ownerConsoleComplete" -> {
-                    String command = text(json, "command", 256).replaceFirst("^/+", "");
+                    String command = rawText(json, "command", 256).replaceFirst("^\\s*/+", "").replaceFirst("^\\s+", "");
                     Set<String> suggestions = new LinkedHashSet<>();
-                    List<String> direct = Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), command);
-                    if (direct != null) suggestions.addAll(direct);
-                    List<String> slashed = Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), "/" + command);
-                    if (slashed != null) suggestions.addAll(slashed);
-                    String first = command.toLowerCase().split("\\s+", 2)[0];
-                    for (String known : List.of("announce", "ban", "ban-ip", "cobble", "cobblebet", "gamemode", "gamerule", "give", "kick", "killall", "list", "pardon", "reload", "say", "stop", "teleport", "time", "weather", "whitelist")) {
-                        if (known.startsWith(first)) suggestions.add(known);
+                    try { addNativeSuggestions(command, suggestions, Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), command)); }
+                    catch (RuntimeException ignored) {}
+                    try { addNativeSuggestions(command, suggestions, Bukkit.getCommandMap().tabComplete(Bukkit.getConsoleSender(), "/" + command)); }
+                    catch (RuntimeException ignored) {}
+                    CompletionPoint point = completionPoint(command);
+                    if (point.argument() == 0) {
+                        for (String known : List.of("announce", "ban", "ban-ip", "clear", "cobble", "cobblebet", "deop", "effect", "enchant", "gamemode", "gamerule", "give", "kick", "kill", "killall", "list", "op", "pardon", "reload", "say", "stop", "teleport", "time", "weather", "whitelist")) {
+                            if (known.startsWith(point.partial().toLowerCase())) suggestions.add(known);
+                        }
+                    }
+                    if (isPlayerArgument(point.command(), point.argument())) {
+                        for (String selector : List.of("@a", "@e", "@p", "@r", "@s")) if (selector.startsWith(point.partial().toLowerCase())) suggestions.add(point.prefix() + selector);
+                        Bukkit.getOnlinePlayers().stream().map(player -> player.getName()).filter(name -> name.toLowerCase().startsWith(point.partial().toLowerCase())).forEach(name -> suggestions.add(point.prefix() + name));
+                    }
+                    if ((point.command().equals("give") && point.argument() == 2) || (point.command().equals("clear") && point.argument() == 2)) {
+                        for (Material material : Material.values()) {
+                            if (!material.isItem() || material.isLegacy()) continue;
+                            String name = material.name().toLowerCase();
+                            if (name.startsWith(point.partial().toLowerCase())) suggestions.add(point.prefix() + name);
+                        }
                     }
                     JsonArray values = new JsonArray();
-                    suggestions.stream().map(value -> value.replaceFirst("^/+", "")).limit(20).forEach(values::add);
+                    suggestions.stream().map(value -> value.replaceFirst("^/+", "")).limit(40).forEach(values::add);
                     result.add("suggestions", values);
                     result.addProperty("success", true);
                 }
@@ -70,6 +84,16 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
                         players.add(entry);
                     });
                     result.add("players", players);
+                    JsonArray logs = new JsonArray();
+                    if (Main.getInstance().getConsoleLogService() != null) Main.getInstance().getConsoleLogService().snapshot().forEach(log -> {
+                        JsonObject entry = new JsonObject();
+                        entry.addProperty("timestamp", log.timestamp());
+                        entry.addProperty("level", log.level());
+                        entry.addProperty("logger", log.logger());
+                        entry.addProperty("message", log.message());
+                        logs.add(entry);
+                    });
+                    result.add("logs", logs);
                     result.addProperty("success", true);
                 }
                 case "ownerWalletSet" -> {
@@ -98,4 +122,43 @@ public final class SocketOwnerConsoleListener extends SocketMessageListener {
         String value = json.get(key).getAsString().trim();
         return value.substring(0, Math.min(max, value.length()));
     }
+
+    private static String rawText(JsonObject json, String key, int max) {
+        if (!json.has(key) || !json.get(key).isJsonPrimitive()) return "";
+        String value = json.get(key).getAsString();
+        return value.substring(0, Math.min(max, value.length()));
+    }
+
+    private static void addNativeSuggestions(String command, Set<String> suggestions, List<String> nativeValues) {
+        if (nativeValues == null) return;
+        CompletionPoint point = completionPoint(command);
+        for (String nativeValue : nativeValues) {
+            if (nativeValue == null || nativeValue.isBlank()) continue;
+            String value = nativeValue.replaceFirst("^/+", "");
+            if (value.startsWith("minecraft:") && !point.partial().contains(":")) value = value.substring("minecraft:".length());
+            suggestions.add(point.prefix().isEmpty() || value.contains(" ") ? value : point.prefix() + value);
+        }
+    }
+
+    private static CompletionPoint completionPoint(String command) {
+        int start = command.length();
+        while (start > 0 && !Character.isWhitespace(command.charAt(start - 1))) start--;
+        String prefix = command.substring(0, start);
+        String partial = command.substring(start);
+        String before = prefix.trim();
+        String[] tokens = before.isEmpty() ? new String[0] : before.split("\\s+");
+        String root = tokens.length == 0 ? partial.toLowerCase() : tokens[0].toLowerCase();
+        return new CompletionPoint(prefix, partial, root, tokens.length);
+    }
+
+    private static boolean isPlayerArgument(String command, int argument) {
+        return switch (command) {
+            case "give", "clear", "kick", "ban", "pardon", "op", "deop", "kill", "enchant" -> argument == 1;
+            case "gamemode", "effect" -> argument == 2;
+            case "teleport", "tp" -> argument == 1 || argument == 2;
+            default -> false;
+        };
+    }
+
+    private record CompletionPoint(String prefix, String partial, String command, int argument) {}
 }

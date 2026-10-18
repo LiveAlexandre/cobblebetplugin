@@ -9,6 +9,7 @@ import me.cobbleBet.players.PlayerWallet;
 import me.cobbleBet.services.PluginUpdateManager;
 import me.cobbleBet.services.PluginRuntime;
 import me.cobbleBet.services.ServerStatusService;
+import me.cobbleBet.services.ServerConsoleLogService;
 import me.cobbleBet.storage.PlayerWalletStorage;
 import me.cobbleBet.storage.PluginDataStore;
 import me.cobbleBet.visuals.GamblingIndicatorManager;
@@ -108,6 +109,7 @@ public final class Main extends JavaPlugin {
     private final long startedAt = System.currentTimeMillis();
     private PluginUpdateManager updateManager;
     private ServerStatusService statusService;
+    private ServerConsoleLogService consoleLogService;
 
     @Override
     public void onEnable() {
@@ -122,6 +124,7 @@ public final class Main extends JavaPlugin {
         loadConfigValues();
         me.cobbleBet.storage.WebsiteSettingsStore.load(this);
 
+        consoleLogService = new ServerConsoleLogService(this);
         loadStorage();
         economyManager = PluginRuntime.initialize(this);
         connectSocket();
@@ -144,6 +147,7 @@ public final class Main extends JavaPlugin {
             playerWalletStorage.saveAll();
         }
         PluginRuntime.shutdown(this);
+        if (consoleLogService != null) consoleLogService.close();
     }
 
     // =========================
@@ -287,6 +291,7 @@ public final class Main extends JavaPlugin {
         return economyManager;
     }
     public PluginDataStore getDataStore() { return dataStore; }
+    public ServerConsoleLogService getConsoleLogService() { return consoleLogService; }
     public long getStartedAt() { return startedAt; }
     public long getLastStatusAt() { return statusService == null ? 0L : statusService.lastStatusAt(); }
     public String getPluginFileName() { return getFile().getName(); }
